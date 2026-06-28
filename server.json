@@ -1,14 +1,18 @@
 {
-  "name": "loop-mcp",
-  "description": "L402-native MCP payment proxy — pay per tool call in sats via Lightning. Route any MCP tool through a Bitcoin Lightning paywall. No accounts, no API keys.",
-  "url": "https://mcp.loopxxi.com",
-  "categories": ["payments", "ai", "developer-tools"],
-  "payment_required": true,
-  "payment_protocol": "L402",
-  "payment_amount_sats": 10,
-  "status": "coming-soon",
-  "provider": {
-    "name": "Loop XXI",
-    "url": "https://loopxxi.com"
-  }
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.loop-xxi/loop-mcp",
+  "title": "loop-mcp",
+  "description": "L402-native MCP payment proxy. Pay 10 sats per tool call via Lightning.",
+  "version": "0.1.0",
+  "websiteUrl": "https://loopxxi.com",
+  "repository": {
+    "url": "https://github.com/Loop-XXI/loop-mcp",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://loop-mcp-production-13cf.up.railway.app/mcp"
+    }
+  ]
 }
