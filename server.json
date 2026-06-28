@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.loop-xxi/loop-mcp",
+  "name": "com.loopxxi/loop-mcp",
   "title": "loop-mcp",
   "description": "L402-native MCP payment proxy. Pay 10 sats per tool call via Lightning.",
   "version": "0.1.0",
