@@ -1,0 +1,14 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Loop-XXI/loop-mcp",
+  "title": "loop-mcp",
+  "description": "L402-native MCP payment proxy for Lightning pay-per-call agent tools.",
+  "version": "0.1.0",
+  "websiteUrl": "https://loopxxi.com",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://loop-mcp-production-13cf.up.railway.app/mcp"
+    }
+  ]
+}
