@@ -35,22 +35,11 @@ func main() {
 		c.JSON(200, gin.H{"service": "loop-mcp", "status": "ok", "version": "0.1.0"})
 	})
 
-	// MCP discovery (no auth)
-	r.GET("/mcp", mcpHandler.Discover)
-
-	// MCP tool call (L402 gated)
-	r.POST("/mcp", l402Gate.Gate(), mcpHandler.Call)
-
-	addr := fmt.Sprintf(":%s", port)
-	log.Printf("loop-mcp listening on %s | price=%d sats | phoenixd=%s", addr, priceSats, phoenixdURL)
-	if err := r.Run(addr); err != nil {
-		log.Fatalf("server error: %v", err)
-	}
-}
-
-func getEnv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
+	// Domain verification (Satring, 402index, etc.)
+	r.GET("/.well-known/satring-verify", func(c *gin.Context) {
+		code := os.Getenv("SATRING_VERIFY_CODE")
+		if code == "" {
+			code = "5aab6f01770fa6fa9e09736ff0be6035661c8c6218d6f824644d59c3a2342d7e"
+		}
+		c.String(200, code)
+	})
