@@ -43,3 +43,23 @@ func main() {
 		}
 		c.String(200, code)
 	})
+
+	// MCP discovery (no auth)
+	r.GET("/mcp", mcpHandler.Discover)
+
+	// MCP tool call (L402 gated)
+	r.POST("/mcp", l402Gate.Gate(), mcpHandler.Call)
+
+	addr := fmt.Sprintf(":%s", port)
+	log.Printf("loop-mcp listening on %s | price=%d sats | phoenixd=%s", addr, priceSats, phoenixdURL)
+	if err := r.Run(addr); err != nil {
+		log.Fatalf("server error: %v", err)
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
