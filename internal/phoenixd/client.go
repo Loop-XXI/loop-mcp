@@ -27,7 +27,7 @@ func NewClient(baseURL, password string) *Client {
 
 type Invoice struct {
 	PaymentHash    string `json:"paymentHash"`
-	PaymentRequest string `json:"invoice"`
+	PaymentRequest string `json:"serialized"`
 }
 
 // CreateInvoice creates a Lightning invoice via Phoenixd.
