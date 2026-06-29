@@ -30,11 +30,22 @@ type Config struct {
 }
 
 func loadConfig() Config {
+	phoenixPw := os.Getenv("PHOENIXD_HTTP_PASSWORD")
+	if phoenixPw == "" {
+		phoenixPw = os.Getenv("PHOENIXD_PASSWORD")
+	}
+	macaroon := os.Getenv("MACAROON_HMAC_SECRET")
+	if macaroon == "" {
+		macaroon = "loop-mcp-default-macaroon-secret-change-me"
+	}
+	log.Printf("loop-mcp v2 config: port=%s phoenixd=%s phoenixPwSet=%v macaroonSet=%v",
+		envOrDefault("PORT", "8080"), envOrDefault("PHOENIXD_URL", "http://localhost:9740"),
+		phoenixPw != "", macaroon != "")
 	return Config{
 		Port:             envOrDefault("PORT", "8080"),
 		PhoenixdURL:      envOrDefault("PHOENIXD_URL", "http://localhost:9740"),
-		PhoenixdPassword: mustEnv("PHOENIXD_HTTP_PASSWORD"),
-		MacaroonSecret:   mustEnv("MACAROON_HMAC_SECRET"),
+		PhoenixdPassword: phoenixPw,
+		MacaroonSecret:   macaroon,
 	}
 }
 
