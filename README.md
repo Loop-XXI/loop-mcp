@@ -6,6 +6,95 @@
 
 It is API-compatible with the popular x402-only MCP transport, with one material addition:
 
+> ![L402-paid](https://img.shields.io/badge/tools-L402%20paid-ff9900?logo=lightning&logoColor=white)
+> [![Live](https://img.shields.io/badge/endpoint-live-success)](https://mcp.loopxxi.com/health)
+> [![MCP Registry](https://img.shields.io/badge/registry-com.loopxxi%2Floop--mcp-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=loop-mcp)
+
+## Live L402 deployment (v2.0.1)
+
+A **live, hosted** L402-only deployment is running with 4 paid tools. No API keys, no signup — the Lightning payment **is** the credential.
+
+**Endpoint:** `https://mcp.loopxxi.com/mcp` · **Health:** `https://mcp.loopxxi.com/health`
+
+| Tool | Sats | What it returns |
+|---|---|---|
+| `btc_price` | 10 | Current Bitcoin price in USD + major fiat currencies (mempool.space). |
+| `btc_send_decision` | 15 | A SEND_NOW / WAIT / URGENT_ONLY verdict with fee rates (sat/vB), mempool pressure, and estimated savings — one decision call instead of parsing multiple mempool endpoints. |
+| `lightning_address_resolve` | 10 | Resolve a Lightning Address (`user@domain.com`) to a payable BOLT11 for a given amount — the full LNURL-pay flow in one call. |
+| `tx_decode_explain` | 25 | Decode a Bitcoin tx by txid into a structured agent summary: type, fee, fee rate, confirmation status, RBF/SegWit/Taproot flags, and a one-line `agent_summary` ready for LLM context. Saves 500–2,000 tokens vs raw JSON. |
+
+### How to call (L402 flow)
+
+The agent flow is three HTTP calls: **challenge → pay → retry**. On the first `tools/call` with no payment, the server returns `HTTP 402` with a BOLT11 invoice and an L402 token. Pay the invoice over Lightning, then retry the same request with `Authorization: L402 <token>:<preimage>`. The server verifies the preimage statelessly and serves the result. No database, no session.
+
+> **Parsing note:** the L402 token is colon-delimited (`<paymentHash>:<tool>:<ts>:<hmac>`). The final header is `L402 <token>:<preimage>` — split on the **last** colon, since the preimage is a colon-free 64-char hex string.
+
+#### curl
+
+```bash
+ENDPOINT="https://mcp.loopxxi.com/mcp"
+BODY='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'
+
+# 1. Challenge — expect HTTP 402 with an invoice.
+RESP=$(curl -s -w "\n%{http_code}" -X POST "$ENDPOINT" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d "$BODY")
+HTTP_CODE=$(echo "$RESP" | tail -1)
+BODY_JSON=$(echo "$RESP" | sed '$d')
+
+# 2. Extract the token + BOLT11 invoice from the 402 body.
+TOKEN=$(echo "$BODY_JSON" | grep -o '"token":"[^"]*"' | head -1 | cut -d'"' -f4)
+INVOICE=$(echo "$BODY_JSON" | grep -o '"payment_request":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+# 3. Pay the invoice with any Lightning wallet, then retry with the L402 header.
+#    (replace <PREIMAGE> with the 64-char hex preimage your wallet returns)
+curl -s -X POST "$ENDPOINT" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Authorization: L402 ${TOKEN}:<PREIMAGE>" \
+  -d "$BODY"
+```
+
+#### JavaScript / Node (fetch)
+
+```js
+const ENDPOINT = "https://mcp.loopxxi.com/mcp";
+const callTool = {
+  jsonrpc: "2.0", id: 1, method: "tools/call",
+  params: { name: "btc_price", arguments: {} },
+};
+
+// Replace with your Lightning wallet — must return the 64-char hex preimage.
+async function payBolt11(invoice) { throw new Error("implement payBolt11"); }
+
+// 1. Challenge → 402.
+const res1 = await fetch(ENDPOINT, {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream" },
+  body: JSON.stringify(callTool),
+});
+const { token, payment_request } = (await res1.json()).error;
+
+// 2. Pay the invoice, get the preimage.
+const preimage = await payBolt11(payment_request);
+
+// 3. Retry with Authorization: L402 <token>:<preimage> (split on the LAST colon).
+const res2 = await fetch(ENDPOINT, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/event-stream",
+    "Authorization": "L402 " + token + ":" + preimage,
+  },
+  body: JSON.stringify(callTool),
+});
+console.log(await res2.json());
+```
+
+The live deployment source is in [`cmd/loop-mcp/`](./cmd/loop-mcp) and [`tools/`](./tools) (Go, L402-only). The dual-rail npm library below is the broader transport.
+
+
 > ### The addition: a second rail — Lightning / L402
 > Most agent-payment tooling speaks only **x402 / USDC on Base**. Loop MCP adds the **Lightning Network via [L402](https://github.com/lightninglabs/L402)** as a first-class second rail, negotiated in the *same* `402` response and reconciled into a single **rail-tagged canonical ledger**. As of this writing, **zero** L402-native MCP servers exist in the public MCP registry — this closes that gap.
 
