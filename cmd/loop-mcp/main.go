@@ -27,6 +27,7 @@ type Config struct {
 	PhoenixdURL      string
 	PhoenixdPassword string
 	MacaroonSecret   string
+	GatewayURL       string // Loop Gateway base URL for fiat credit-key debits
 }
 
 func loadConfig() Config {
@@ -46,6 +47,7 @@ func loadConfig() Config {
 		PhoenixdURL:      envOrDefault("PHOENIXD_URL", "http://localhost:9740"),
 		PhoenixdPassword: phoenixPw,
 		MacaroonSecret:   macaroon,
+		GatewayURL:       envOrDefault("LOOP_GATEWAY_URL", "https://api.loopxxi.com"),
 	}
 }
 
@@ -173,6 +175,44 @@ func mcpErr(id interface{}, code int, msg string) MCPResponse {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// Loop Gateway fiat credit-key debit (second payment rail alongside L402)
+// ────────────────────────────────────────────────────────────────────────────
+
+// gatewayDebitResponse is the response from POST /v1/credits/debit on Loop Gateway.
+type gatewayDebitResponse struct {
+	Status      string `json:"status"`
+	Tool       string `json:"tool"`
+	DebitedSats int64 `json:"debited_sats"`
+	BalanceSats int64 `json:"balance_sats"`
+}
+
+// debitGatewayCredit atomically debits sats from a prepaid account via Loop
+// Gateway's /v1/credits/debit endpoint. The caller's own credit_key (a loop_
+// bearer token) is forwarded as Bearer — Loop Gateway debits the agent's own
+// balance. Returns (ok, error): ok=true means the debit succeeded and the
+// caller may serve the tool.
+func debitGatewayCredit(cfg Config, creditKey string, toolName string, sats int64) (bool, error) {
+	body, _ := json.Marshal(map[string]interface{}{
+		"amount_sats": sats,
+		"tool":       toolName,
+	})
+	req, err := http.NewRequest("POST", cfg.GatewayURL+"/v1/credits/debit", strings.NewReader(string(body)))
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+creditKey)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK, nil
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // L402 middleware
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -210,8 +250,38 @@ func l402Middleware(cfg Config) gin.HandlerFunc {
 			return
 		}
 
-		// Verify L402 token
+		// ── FIAT PATH: Bearer loop_<credit_key> (Loop Gateway prepaid debit) ──
 		authHeader := c.GetHeader("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer loop_") || strings.HasPrefix(authHeader, "Bearer smartsat_") {
+			creditKey := authHeader[7:] // strip "Bearer "
+			ok, derr := debitGatewayCredit(cfg, creditKey, toolName, tool.SatsPrice)
+			if derr != nil {
+				log.Printf("gateway debit error for %s: %v", toolName, derr)
+				c.JSON(http.StatusServiceUnavailable, mcpErr(req.ID, -32000, "payment processor unavailable"))
+				c.Abort()
+				return
+			}
+			if !ok {
+				c.JSON(http.StatusPaymentRequired, gin.H{
+					"error": gin.H{
+						"code":         402,
+						"message":      "Insufficient credit balance. Top up at https://api.loopxxi.com/ai-credits",
+						"type":         "insufficient_funds",
+						"refill_url":   "https://api.loopxxi.com/ai-credits",
+						"requested_sats": tool.SatsPrice,
+					},
+				})
+				c.Abort()
+				return
+			}
+			c.Set("payment_method", "fiat_credit")
+			c.Set("toolName", toolName)
+			c.Set("toolArgs", callParams.Arguments)
+			c.Next()
+			return
+		}
+
+		// Verify L402 token
 		if strings.HasPrefix(authHeader, "L402 ") {
 			cred := authHeader[5:]
 			lastColon := strings.LastIndex(cred, ":")
@@ -354,7 +424,7 @@ func main() {
 
 	// Health check — no auth
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "version": "2.0.0"})
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "version": "2.1.0"})
 	})
 
 	// GET /mcp — free tool discovery for agents
@@ -370,12 +440,15 @@ func main() {
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"server":       "loop-mcp",
-			"version":      "2.0.0",
+			"version":      "2.1.0",
 			"protocol":     "MCP 2024-11-05",
-			"payment_rail": "L402 (Lightning Network)",
-			"tools":        toolList,
-			"docs":         "https://github.com/Loop-XXI/loop-mcp",
-			"contact":      "business@loopxxi.com",
+			"payment_rails": []gin.H{
+				{"name": "L402 (Lightning)", "instructions": "Authorization: L402 <token>:<preimage>"},
+				{"name": "Fiat credit_key (Stripe)", "instructions": "Authorization: Bearer loop_<credit_key>. Buy credits at https://api.loopxxi.com/ai-credits"},
+			},
+			"tools":   toolList,
+			"docs":    "https://github.com/Loop-XXI/loop-mcp",
+			"contact": "business@loopxxi.com",
 		})
 	})
 
