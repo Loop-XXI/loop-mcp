@@ -213,9 +213,10 @@ func l402Middleware(cfg Config) gin.HandlerFunc {
 		// Verify L402 token
 		authHeader := c.GetHeader("Authorization")
 		if strings.HasPrefix(authHeader, "L402 ") {
-			parts := strings.SplitN(authHeader[5:], ":", 2)
-			if len(parts) == 2 {
-				token, preimage := parts[0], parts[1]
+			cred := authHeader[5:]
+			lastColon := strings.LastIndex(cred, ":")
+			if lastColon > 0 {
+				token, preimage := cred[:lastColon], cred[lastColon+1:]
 				ph, tn, ok := verifyToken(cfg.MacaroonSecret, token)
 				if ok && tn == toolName {
 					preimageBytes, _ := hex.DecodeString(preimage)
