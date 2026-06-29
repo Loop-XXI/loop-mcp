@@ -1,18 +1,63 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "com.loopxxi/loop-mcp",
-  "title": "loop-mcp",
-  "description": "L402-native MCP payment proxy. Pay 10 sats per tool call via Lightning.",
-  "version": "0.1.0",
-  "websiteUrl": "https://loopxxi.com",
-  "repository": {
-    "url": "https://github.com/Loop-XXI/loop-mcp",
-    "source": "github"
+  "version": "2.0.0",
+  "display_name": "Loop XXI Bitcoin + Lightning MCP",
+  "description": "L402-native MCP server for autonomous AI agents. All tools are gated by per-call Lightning micropayments (10-25 sats). Provides composited Bitcoin fee intelligence, send-or-wait decisions, Lightning Address resolution, and Bitcoin transaction analysis — the data primitives agents need to operate in the Bitcoin economy.",
+  "license": "MIT",
+  "contact": "business@loopxxi.com",
+  "publisher": {
+    "name": "Loop XXI LLC",
+    "url": "https://loopxxi.com",
+    "email": "business@loopxxi.com"
   },
-  "remotes": [
+  "homepage": "https://github.com/Loop-XXI/loop-mcp",
+  "repository": "https://github.com/Loop-XXI/loop-mcp",
+  "server_url": "https://loop-mcp-production-13cf.up.railway.app/mcp",
+  "transport": "http",
+  "categories": ["finance", "tools", "data"],
+  "tags": [
+    "bitcoin",
+    "lightning",
+    "l402",
+    "mempool",
+    "payments",
+    "agent-economy",
+    "micropayments",
+    "bolt11",
+    "lnurl"
+  ],
+  "payment": {
+    "protocol": "L402",
+    "rail": "Lightning Network",
+    "currency": "BTC (satoshis)",
+    "pricing_note": "Per-tool pricing from 10 to 25 sats per call. Invoice issued on first request; retry with preimage to access result."
+  },
+  "tools": [
     {
-      "type": "streamable-http",
-      "url": "https://loop-mcp-production-13cf.up.railway.app/mcp"
+      "name": "btc_price",
+      "description": "Current Bitcoin price in USD and major fiat currencies. Source: mempool.space.",
+      "price_sats": 10
+    },
+    {
+      "name": "btc_send_decision",
+      "description": "Composited send-or-wait decision for Bitcoin transactions. Returns SEND_NOW, WAIT, or URGENT_ONLY verdict with fee rates in sat/vB, mempool pressure, and estimated savings. Single decision call replaces parsing multiple raw mempool endpoints.",
+      "price_sats": 15
+    },
+    {
+      "name": "lightning_address_resolve",
+      "description": "Resolve a Lightning Address (user@domain.com) to a payable BOLT11 invoice for a given amount. Handles the full LNURL-pay protocol — three HTTP calls reduced to one MCP tool call.",
+      "price_sats": 10
+    },
+    {
+      "name": "tx_decode_explain",
+      "description": "Fetch a Bitcoin transaction by txid and return a structured agent summary: transaction type, fee, fee rate in sat/vB, confirmation status, RBF/SegWit/Taproot flags, and a one-line agent_summary string ready for LLM context injection. Saves 500-2000 tokens vs parsing raw JSON.",
+      "price_sats": 25
     }
-  ]
+  ],
+  "auth": {
+    "type": "L402",
+    "description": "No API key required. On first tools/call request, the server responds HTTP 402 with a Lightning invoice in the WWW-Authenticate: L402 header. Pay the invoice, then retry with Authorization: L402 <token>:<preimage>."
+  },
+  "status": "active",
+  "updated_at": "2026-06-28"
 }
