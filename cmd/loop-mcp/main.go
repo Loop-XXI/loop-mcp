@@ -405,6 +405,8 @@ func dispatchTool(name string, args json.RawMessage) (interface{}, error) {
 		return tools.HandleLightningAddressResolve(args)
 	case "tx_decode_explain":
 		return tools.HandleTxDecodeExplain(args)
+	case "optimal_send_window":
+		return tools.HandleOptimalSendWindow(args)
 	default:
 		return nil, fmt.Errorf("no handler for tool: %s", name)
 	}
