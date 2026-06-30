@@ -1,83 +1,24 @@
 {
-  "name": "com.loopxxi/loop-mcp",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.loop-xxi/loop-mcp",
+  "title": "loop-mcp",
+  "description": "L402-native Bitcoin/Lightning MCP server. 5 pay-per-call tools for AI agents at 10\u201325 sats/call via Lightning Network: BTC price, fee send-decision (SEND_NOW/WAIT/URGENT_ONLY), Lightning Address resolver, TX decoder with agent-ready summary, and optimal send window. No API keys, no accounts required.",
   "version": "2.2.0",
-  "display_name": "Loop XXI Bitcoin + Lightning MCP",
-  "description": "L402-native MCP server for autonomous AI agents. Paid Bitcoin and Lightning tools are gated by per-call Lightning micropayments (10-25 sats) or fiat-funded credit keys. Provides live Bitcoin price, fee intelligence, send-or-wait decisions, Lightning Address resolution, transaction analysis, and optimal send-window timing.",
-  "license": "MIT",
-  "contact": "business@loopxxi.com",
-  "publisher": {
-    "name": "Loop XXI LLC",
-    "url": "https://loopxxi.com",
-    "email": "business@loopxxi.com"
+  "websiteUrl": "https://mcp.loopxxi.com",
+  "repository": {
+    "url": "https://github.com/Loop-XXI/loop-mcp.git",
+    "source": "github"
   },
-  "homepage": "https://mcp.loopxxi.com/",
-  "repository": "https://github.com/Loop-XXI/loop-mcp",
-  "server_url": "https://mcp.loopxxi.com/mcp",
-  "transport": "streamable-http",
-  "categories": [
-    "finance",
-    "tools",
-    "data"
-  ],
-  "tags": [
-    "bitcoin",
-    "lightning",
-    "l402",
-    "mempool",
-    "payments",
-    "agent-economy",
-    "micropayments",
-    "bolt11",
-    "lnurl",
-    "stripe",
-    "fiat-credits"
-  ],
-  "payment": {
-    "protocols": [
-      "L402",
-      "fiat-credit-key"
-    ],
-    "rails": [
-      "Lightning Network",
-      "Stripe-funded prepaid credits"
-    ],
-    "currency": "BTC satoshis",
-    "pricing_note": "Per-tool pricing from 10 to 25 sats per call. L402 invoices are issued on first unauthenticated request; fiat credit keys can be purchased at https://api.loopxxi.com/ai-credits."
-  },
-  "tools": [
+  "packages": [
     {
-      "name": "btc_price",
-      "description": "Current Bitcoin price in USD and major fiat currencies. Source: mempool.space.",
-      "price_sats": 10
-    },
-    {
-      "name": "btc_send_decision",
-      "description": "Composited send-or-wait decision for Bitcoin transactions. Returns SEND_NOW, WAIT, or URGENT_ONLY verdict with fee rates in sat/vB, mempool pressure, and estimated savings.",
-      "price_sats": 15
-    },
-    {
-      "name": "lightning_address_resolve",
-      "description": "Resolve a Lightning Address (user@domain.com) to a payable BOLT11 invoice for a given amount. Handles the full LNURL-pay protocol in one MCP tool call.",
-      "price_sats": 10
-    },
-    {
-      "name": "tx_decode_explain",
-      "description": "Fetch a Bitcoin transaction by txid and return a structured agent summary: type, fee, fee rate, confirmation status, RBF/SegWit/Taproot flags, and an agent_summary string.",
-      "price_sats": 25
-    },
-    {
-      "name": "optimal_send_window",
-      "description": "Bitcoin transaction timing intelligence: recommended send window, fee trajectory, congestion forecast, confirmation targets, and RBF viability from live mempool data.",
-      "price_sats": 25
+      "registryType": "oci",
+      "identifier": "ghcr.io/loop-xxi/loop-mcp",
+      "version": "2.2.0",
+      "runtimeHint": "docker",
+      "transport": {
+        "type": "http",
+        "url": "https://mcp.loopxxi.com/mcp"
+      }
     }
-  ],
-  "auth": {
-    "types": [
-      "L402",
-      "Bearer credit_key"
-    ],
-    "description": "No account required for L402. First tools/call returns HTTP 402 with a Lightning invoice and token; pay and retry with Authorization: L402 <token>:<preimage>. Fiat credit keys use Authorization: Bearer loop_<credit_key>."
-  },
-  "status": "active",
-  "updated_at": "2026-06-30T12:50Z"
+  ]
 }
