@@ -513,6 +513,12 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "version": "2.2.0"})
 	})
 
+	// Satring domain verification challenge — no auth.
+	// Generated 2026-06-30 for the loop-mcp listing.
+	r.GET("/.well-known/satring-verify", func(c *gin.Context) {
+		c.String(http.StatusOK, "bf6000d67cc6050662d50b51265736729b00eb0f6a8853d2a8f1e6d1ff7d109e")
+	})
+
 	// GET /mcp — free tool discovery for agents
 	r.GET("/mcp", func(c *gin.Context) {
 		var toolList []gin.H
