@@ -1,8 +1,8 @@
 {
   "name": "com.loopxxi/loop-mcp",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "display_name": "Loop XXI Bitcoin + Lightning MCP",
-  "description": "L402-native MCP server for autonomous AI agents. All tools are gated by per-call Lightning micropayments (10-25 sats). Provides composited Bitcoin fee intelligence, send-or-wait decisions, Lightning Address resolution, and Bitcoin transaction analysis — the data primitives agents need to operate in the Bitcoin economy.",
+  "description": "L402-native MCP server for autonomous AI agents. Paid Bitcoin and Lightning tools are gated by per-call Lightning micropayments (10-25 sats) or fiat-funded credit keys. Provides live Bitcoin price, fee intelligence, send-or-wait decisions, Lightning Address resolution, transaction analysis, and optimal send-window timing.",
   "license": "MIT",
   "contact": "business@loopxxi.com",
   "publisher": {
@@ -10,11 +10,15 @@
     "url": "https://loopxxi.com",
     "email": "business@loopxxi.com"
   },
-  "homepage": "https://github.com/Loop-XXI/loop-mcp",
+  "homepage": "https://mcp.loopxxi.com/",
   "repository": "https://github.com/Loop-XXI/loop-mcp",
-  "server_url": "https://loop-mcp-production-13cf.up.railway.app/mcp",
-  "transport": "http",
-  "categories": ["finance", "tools", "data"],
+  "server_url": "https://mcp.loopxxi.com/mcp",
+  "transport": "streamable-http",
+  "categories": [
+    "finance",
+    "tools",
+    "data"
+  ],
   "tags": [
     "bitcoin",
     "lightning",
@@ -24,13 +28,21 @@
     "agent-economy",
     "micropayments",
     "bolt11",
-    "lnurl"
+    "lnurl",
+    "stripe",
+    "fiat-credits"
   ],
   "payment": {
-    "protocol": "L402",
-    "rail": "Lightning Network",
-    "currency": "BTC (satoshis)",
-    "pricing_note": "Per-tool pricing from 10 to 25 sats per call. Invoice issued on first request; retry with preimage to access result."
+    "protocols": [
+      "L402",
+      "fiat-credit-key"
+    ],
+    "rails": [
+      "Lightning Network",
+      "Stripe-funded prepaid credits"
+    ],
+    "currency": "BTC satoshis",
+    "pricing_note": "Per-tool pricing from 10 to 25 sats per call. L402 invoices are issued on first unauthenticated request; fiat credit keys can be purchased at https://api.loopxxi.com/ai-credits."
   },
   "tools": [
     {
@@ -40,24 +52,32 @@
     },
     {
       "name": "btc_send_decision",
-      "description": "Composited send-or-wait decision for Bitcoin transactions. Returns SEND_NOW, WAIT, or URGENT_ONLY verdict with fee rates in sat/vB, mempool pressure, and estimated savings. Single decision call replaces parsing multiple raw mempool endpoints.",
+      "description": "Composited send-or-wait decision for Bitcoin transactions. Returns SEND_NOW, WAIT, or URGENT_ONLY verdict with fee rates in sat/vB, mempool pressure, and estimated savings.",
       "price_sats": 15
     },
     {
       "name": "lightning_address_resolve",
-      "description": "Resolve a Lightning Address (user@domain.com) to a payable BOLT11 invoice for a given amount. Handles the full LNURL-pay protocol — three HTTP calls reduced to one MCP tool call.",
+      "description": "Resolve a Lightning Address (user@domain.com) to a payable BOLT11 invoice for a given amount. Handles the full LNURL-pay protocol in one MCP tool call.",
       "price_sats": 10
     },
     {
       "name": "tx_decode_explain",
-      "description": "Fetch a Bitcoin transaction by txid and return a structured agent summary: transaction type, fee, fee rate in sat/vB, confirmation status, RBF/SegWit/Taproot flags, and a one-line agent_summary string ready for LLM context injection. Saves 500-2000 tokens vs parsing raw JSON.",
+      "description": "Fetch a Bitcoin transaction by txid and return a structured agent summary: type, fee, fee rate, confirmation status, RBF/SegWit/Taproot flags, and an agent_summary string.",
+      "price_sats": 25
+    },
+    {
+      "name": "optimal_send_window",
+      "description": "Bitcoin transaction timing intelligence: recommended send window, fee trajectory, congestion forecast, confirmation targets, and RBF viability from live mempool data.",
       "price_sats": 25
     }
   ],
   "auth": {
-    "type": "L402",
-    "description": "No API key required. On first tools/call request, the server responds HTTP 402 with a Lightning invoice in the WWW-Authenticate: L402 header. Pay the invoice, then retry with Authorization: L402 <token>:<preimage>."
+    "types": [
+      "L402",
+      "Bearer credit_key"
+    ],
+    "description": "No account required for L402. First tools/call returns HTTP 402 with a Lightning invoice and token; pay and retry with Authorization: L402 <token>:<preimage>. Fiat credit keys use Authorization: Bearer loop_<credit_key>."
   },
   "status": "active",
-  "updated_at": "2026-06-29T01:30Z"
+  "updated_at": "2026-06-30T12:50Z"
 }

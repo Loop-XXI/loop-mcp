@@ -12,7 +12,7 @@ It is API-compatible with the popular x402-only MCP transport, with one material
 
 ## Live deployment (v2.2.0)
 
-A **live, hosted** deployment is running with paid tools on **two payment rails**: Lightning (L402) and fiat-funded credits via Stripe. No API keys, no signup — payment **is** the credential. A branded landing page and a free try endpoint are at `https://mcp.loopxxi.com/`.
+A **live, hosted** deployment is running with **5 paid tools** on **two payment rails**: Lightning (L402) and fiat-funded credits via Stripe. No API keys, no signup — payment **is** the credential. A branded landing page and a free try endpoint are at `https://mcp.loopxxi.com/`.
 
 **Endpoint:** `https://mcp.loopxxi.com/mcp` · **Health:** `https://mcp.loopxxi.com/health` · **Landing:** `https://mcp.loopxxi.com/`
 
@@ -22,12 +22,13 @@ A **live, hosted** deployment is running with paid tools on **two payment rails*
 | `btc_send_decision` | 15 | A SEND_NOW / WAIT / URGENT_ONLY verdict with fee rates (sat/vB), mempool pressure, and estimated savings — one decision call instead of parsing multiple mempool endpoints. |
 | `lightning_address_resolve` | 10 | Resolve a Lightning Address (`user@domain.com`) to a payable BOLT11 for a given amount — the full LNURL-pay flow in one call. |
 | `tx_decode_explain` | 25 | Decode a Bitcoin tx by txid into a structured agent summary: type, fee, fee rate, confirmation status, RBF/SegWit/Taproot flags, and a one-line `agent_summary` ready for LLM context. Saves 500–2,000 tokens vs raw JSON. |
+| `optimal_send_window` | 25 | Bitcoin transaction timing intelligence: recommended send window, fee trajectory, congestion forecast, confirmation targets, and RBF viability from live mempool data. |
 
 ### Two payment rails
 
 Agents pay per `tools/call` via either rail:
 
-- **Lightning (L402)** — `Authorization: L402 <token>:<preimage>`. 10–25 sats/call. The default; no account needed.
+- **Lightning (L402)** — `Authorization: L402 <token>:<preimage>`. 10–25 sats/call across 5 tools. The default; no account needed.
 - **Fiat credits (Stripe)** — `Authorization: Bearer loop_<credit_key>`. Buy a credit key at [`api.loopxxi.com/ai-credits`](https://api.loopxxi.com/ai-credits) ($10/$25/$50 packs → sats at the live BTC price). loop-mcp forwards the key to Loop Gateway's `POST /v1/credits/debit`, which atomically debits the prepaid sats ledger. Same 1:1 sats pricing as L402.
 
 A request with no auth returns `HTTP 402` with a Lightning invoice (L402) and, in the body, a pointer to the fiat refill URL. Insufficient fiat balance returns `402` with `refill_url: https://api.loopxxi.com/ai-credits`.
