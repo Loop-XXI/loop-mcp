@@ -1,24 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.loop-xxi/loop-mcp",
+  "name": "com.loopxxi/loop-mcp",
+  "description": "L402 MCP: 5 paid BTC/Lightning tools + fiat credits, 10-25 sats/call.",
   "title": "loop-mcp",
-  "description": "L402-native Bitcoin/Lightning MCP server. 5 pay-per-call tools for AI agents at 10\u201325 sats/call via Lightning Network: BTC price, fee send-decision (SEND_NOW/WAIT/URGENT_ONLY), Lightning Address resolver, TX decoder with agent-ready summary, and optimal send window. No API keys, no accounts required.",
-  "version": "2.2.0",
-  "websiteUrl": "https://mcp.loopxxi.com",
   "repository": {
-    "url": "https://github.com/Loop-XXI/loop-mcp.git",
+    "url": "https://github.com/Loop-XXI/loop-mcp",
     "source": "github"
   },
-  "packages": [
+  "version": "2.2.0",
+  "websiteUrl": "https://loopxxi.com",
+  "remotes": [
     {
-      "registryType": "oci",
-      "identifier": "ghcr.io/loop-xxi/loop-mcp",
-      "version": "2.2.0",
-      "runtimeHint": "docker",
-      "transport": {
-        "type": "http",
-        "url": "https://mcp.loopxxi.com/mcp"
-      }
+      "type": "streamable-http",
+      "url": "https://mcp.loopxxi.com/mcp"
     }
   ]
 }
