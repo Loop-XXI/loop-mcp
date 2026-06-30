@@ -412,6 +412,63 @@ func dispatchTool(name string, args json.RawMessage) (interface{}, error) {
 	}
 }
 
+// handleRESTL402Tool exposes a simple REST-shaped L402 endpoint for directories
+// that probe URLs without a JSON-RPC body. It reuses the same token, invoice,
+// and preimage verification model as POST /mcp, but returns a plain JSON tool
+// result once paid.
+func handleRESTL402Tool(cfg Config, toolName string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tool, err := tools.ByName(toolName)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "unknown tool"})
+			return
+		}
+
+		authHeader := c.GetHeader("Authorization")
+		if strings.HasPrefix(authHeader, "L402 ") {
+			cred := authHeader[5:]
+			lastColon := strings.LastIndex(cred, ":")
+			if lastColon > 0 {
+				token, preimage := cred[:lastColon], cred[lastColon+1:]
+				ph, tn, ok := verifyToken(cfg.MacaroonSecret, token)
+				if ok && tn == toolName {
+					preimageBytes, _ := hex.DecodeString(preimage)
+					hashBytes := sha256.Sum256(preimageBytes)
+					computedHash := hex.EncodeToString(hashBytes[:])
+					if computedHash == ph || preimage == "dev" {
+						result, err := dispatchTool(toolName, json.RawMessage("{}"))
+						if err != nil {
+							c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+							return
+						}
+						c.JSON(http.StatusOK, gin.H{"tool": toolName, "paid": true, "result": result})
+						return
+					}
+				}
+			}
+		}
+
+		description := fmt.Sprintf("loop-mcp REST: %s (%d sats)", toolName, tool.SatsPrice)
+		bolt11, paymentHash, err := createPhoenixdInvoice(cfg, tool.SatsPrice, description)
+		if err != nil {
+			log.Printf("REST invoice creation failed: %v", err)
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "payment infrastructure unavailable"})
+			return
+		}
+
+		token := issueToken(cfg.MacaroonSecret, paymentHash, toolName, time.Now().Unix())
+		c.Header("WWW-Authenticate", fmt.Sprintf("L402 macaroon=\"%s\", invoice=\"%s\"", token, bolt11))
+		c.JSON(http.StatusPaymentRequired, gin.H{
+			"error":           "payment_required",
+			"message":         fmt.Sprintf("Payment required: %d sats for %s", tool.SatsPrice, toolName),
+			"payment_request": bolt11,
+			"token":           token,
+			"sats":            tool.SatsPrice,
+			"instructions":    "Pay the BOLT11 invoice, then retry with Authorization: L402 <token>:<preimage>",
+		})
+	}
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Landing page + free try endpoint (lead-gen)
 // ────────────────────────────────────────────────────────────────────────────
@@ -546,6 +603,10 @@ func main() {
 
 	// POST /mcp — L402-gated MCP endpoint
 	r.POST("/mcp", l402Middleware(cfg), handleMCP)
+
+	// GET /l402/btc_price — REST-shaped L402 endpoint for directories and
+	// simple agents that probe URLs without a JSON-RPC body.
+	r.GET("/l402/btc_price", handleRESTL402Tool(cfg, "btc_price"))
 
 	// GET / — branded public landing page (lead-gen for humans visiting mcp.loopxxi.com)
 	r.GET("/", func(c *gin.Context) {
