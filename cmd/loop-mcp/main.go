@@ -411,6 +411,90 @@ func dispatchTool(name string, args json.RawMessage) (interface{}, error) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// Landing page + free try endpoint (lead-gen)
+// ────────────────────────────────────────────────────────────────────────────
+
+// landingHTML is the branded public landing page served at GET /.
+// Kept minimal and on-brand (Obsidian/Bone, Inter, no accent color).
+const landingHTML = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>loop-mcp — Paid MCP tools for AI agents</title>
+<meta name="description" content="An L402-native MCP server where AI agents pay per tool call in sats over Lightning or fiat credits via Stripe. Four live Bitcoin and Lightning tools.">
+<meta property="og:title" content="loop-mcp">
+<meta property="og:description" content="Paid MCP tools for autonomous AI agents. Pay per call in sats or fiat credits.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mcp.loopxxi.com">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="preconnect" href="https://rsms.me/">
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+<link rel="icon" type="image/png" href="https://loopxxi.com/LoopXXI-Logo.png">
+<style>
+  :root { --bg:#0a0a0a; --ink:#e8e6df; --muted:#8a877e; --dim:#595550; --line:#1f1e1b; --surface:#141412; --green:#22c55e; --btc:#f7931a; --ln:#a78bfa; }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;font-feature-settings:"ss01","cv11";font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  ::selection{background:var(--ink);color:var(--bg)}
+  a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--dim);transition:border-color .2s}
+  a:hover{border-color:var(--ink)}
+  .wrap{max-width:880px;margin:0 auto;padding:0 32px}
+  header{padding:28px 0;border-bottom:1px solid var(--line)}
+  header .wrap{display:flex;justify-content:space-between;align-items:center}
+  .brand{font-weight:600;font-size:17px;letter-spacing:-0.02em;border:none}
+  .brand span{color:var(--muted);font-weight:400}
+  .nav-links{display:flex;gap:24px;list-style:none}
+  .nav-links a{font-size:14px;color:var(--muted);border:none}
+  .nav-links a:hover{color:var(--ink)}
+  .hero{padding:80px 0 56px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border:1px solid rgba(34,197,94,.3);border-radius:100px;font-size:12px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;color:var(--green);background:rgba(34,197,94,.06);margin-bottom:28px}
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  h1{font-weight:500;font-size:clamp(36px,5vw,52px);line-height:1.08;letter-spacing:-0.03em;text-wrap:balance}
+  .hero p{margin-top:24px;font-size:18px;color:var(--muted);max-width:56ch;text-wrap:pretty}
+  .rails{display:flex;gap:12px;margin-top:32px;flex-wrap:wrap}
+  .rail{padding:10px 16px;border:1px solid var(--line);border-radius:10px;font-size:13px;color:var(--muted);background:var(--surface)}
+  .rail strong{color:var(--ink);font-weight:500}
+  section{padding:48px 0;border-top:1px solid var(--line)}
+  h2{font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:28px}
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .tool{padding:24px;border:1px solid var(--line);border-radius:12px;background:var(--surface);transition:border-color .25s}
+  .tool:hover{border-color:var(--dim)}
+  .tool-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+  .tool-name{font-weight:500;font-size:16px;letter-spacing:-0.01em}
+  .tool-price{font-size:12px;font-weight:600;color:var(--green);letter-spacing:0.04em}
+  .tool-desc{font-size:14px;color:var(--muted);line-height:1.6}
+  .try{margin-top:36px;padding:28px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  .try h3{font-weight:500;font-size:17px;margin-bottom:8px;letter-spacing:-0.01em}
+  .try p{font-size:14px;color:var(--muted);margin-bottom:16px}
+  .try-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:100px;background:var(--ink);color:var(--bg);font-size:14px;font-weight:600;border:none;cursor:pointer;transition:opacity .2s}
+  .try-btn:hover{opacity:.9}
+  .try-btn:disabled{opacity:.5;cursor:wait}
+  #result{margin-top:20px;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--ink);white-space:pre-wrap;word-break:break-all;display:none}
+  #result.show{display:block}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--surface);padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
+  .code-block{margin-top:16px;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted);overflow-x:auto;white-space:pre;line-height:1.6}
+  .code-block .k{color:var(--ln)}
+  .code-block .s{color:var(--green)}
+  footer{padding:40px 0;border-top:1px solid var(--line)}
+  footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  footer p{font-size:13px;color:var(--muted)}
+  footer a{color:var(--muted);border:none}
+  footer a:hover{color:var(--ink)}
+  @media (max-width:640px){.tools{grid-template-columns:1fr}.wrap{padding:0 20px}.hero{padding:48px 0 32px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><a href="https://loopxxi.com" class="brand">loop-mcp <span>by LoopXXI</span></a><ul class="nav-links"><li><a href="https://github.com/Loop-XXI/loop-mcp">GitHub</a></li><li><a href="https://loopxxi.com">LoopXXI</a></li></ul></div></header>
+<div class="wrap"><div class="hero"><div class="pill"><span class="dot"></span>Live · v2.2.0</div><h1>Paid tools for autonomous AI agents.</h1><p>An L402-native MCP server where agents pay per tool call — 10 to 25 sats over Lightning, or fiat-funded credits via Stripe. Payment is the credential: no API keys, no accounts. The first MCP server on the official Registry that charges agents directly.</p><div class="rails"><div class="rail"><strong>Lightning (L402)</strong> — 10-25 sats/call</div><div class="rail"><strong>Stripe credits</strong> — <a href="https://api.loopxxi.com/ai-credits">buy a key</a></div></div></div>
+<section><h2>Live tools</h2><div class="tools"><div class="tool"><div class="tool-head"><span class="tool-name">btc_price</span><span class="tool-price">10 sats</span></div><div class="tool-desc">Current Bitcoin price in USD and major fiat currencies. Source: mempool.space.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">btc_send_decision</span><span class="tool-price">15 sats</span></div><div class="tool-desc">Send-or-wait verdict with fee rates, mempool pressure, and estimated savings. One call replaces parsing multiple mempool endpoints.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">lightning_address_resolve</span><span class="tool-price">10 sats</span></div><div class="tool-desc">Resolve a Lightning Address to a payable BOLT11 invoice. Full LNURL-pay protocol in one call.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">tx_decode_explain</span><span class="tool-price">25 sats</span></div><div class="tool-desc">Fetch a Bitcoin transaction by txid and get a structured agent summary — type, fee, flags, confirmation status. Saves 500-2,000 LLM tokens.</div></div></div><div class="try"><h3>Try it free — no wallet required.</h3><p>Fetch the live Bitcoin price. This read-only call is free on this page; in production, an agent pays 10 sats or a fraction of a fiat credit.</p><button class="try-btn" id="tryBtn" onclick="fetchPrice()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Get BTC price</button><div id="result"></div></div></section>
+<section><h2>How agents pay</h2><p style="color:var(--muted);font-size:15px;max-width:60ch">An agent calls a tool with no auth. The server returns <code>402 Payment Required</code> with a Lightning invoice (L402) or points to a fiat credit key. The agent pays, then retries with the proof of payment — and gets the result.</p><div class="code-block"><span class="k"># 1. Call a tool → get a 402 + Lightning invoice</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span>\n\n<span class="k"># 2. Pay the BOLT11 invoice, then retry with the L402 token + preimage</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -H <span class="s">"Authorization: L402 &lt;token&gt;:&lt;preimage&gt;"</span> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span>\n\n<span class="k"># Fiat path: buy a credit key, then use it as a Bearer token</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Authorization: Bearer loop_&lt;credit_key&gt;"</span> \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span></div><p style="color:var(--dim);font-size:13px;margin-top:14px">Buy fiat credits at <a href="https://api.loopxxi.com/ai-credits">api.loopxxi.com/ai-credits</a>. Full docs in the <a href="https://github.com/Loop-XXI/loop-mcp">GitHub repo</a>.</p></section></div>
+<footer><div class="wrap"><p>© <span id="y"></span> Loop XXI LLC</p><p><a href="mailto:business@loopxxi.com">business@loopxxi.com</a> · <a href="https://github.com/Loop-XXI/loop-mcp">GitHub</a> · <a href="https://loopxxi.com">LoopXXI</a></p></div></footer>
+<script>document.getElementById('y').textContent=new Date().getFullYear();async function fetchPrice(){const btn=document.getElementById('tryBtn');const res=document.getElementById('result');btn.disabled=true;btn.textContent='Fetching...';res.className='show';res.textContent='Calling btc_price via the free MCP endpoint...';try{const r=await fetch('/try/btc_price',{method:'POST'});const j=await r.json();res.textContent=JSON.stringify(j,null,2)}catch(e){res.textContent='Error: '+e.message}btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Get BTC price'}</script>
+</body>
+</html>`
+
+// ────────────────────────────────────────────────────────────────────────────
 // Main
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -424,7 +508,7 @@ func main() {
 
 	// Health check — no auth
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "version": "2.1.0"})
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "version": "2.2.0"})
 	})
 
 	// GET /mcp — free tool discovery for agents
@@ -440,7 +524,7 @@ func main() {
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"server":       "loop-mcp",
-			"version":      "2.1.0",
+			"version":      "2.2.0",
 			"protocol":     "MCP 2024-11-05",
 			"payment_rails": []gin.H{
 				{"name": "L402 (Lightning)", "instructions": "Authorization: L402 <token>:<preimage>"},
@@ -454,6 +538,29 @@ func main() {
 
 	// POST /mcp — L402-gated MCP endpoint
 	r.POST("/mcp", l402Middleware(cfg), handleMCP)
+
+	// GET / — branded public landing page (lead-gen for humans visiting mcp.loopxxi.com)
+	r.GET("/", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(landingHTML))
+	})
+
+	// POST /try/btc_price — free read-only try endpoint (lead-gen; no payment required).
+	// Lets a visitor test the tool output without a Lightning wallet or credit key.
+	// Only btc_price is exposed here (public mempool.space data, no value gating).
+	r.POST("/try/btc_price", func(c *gin.Context) {
+		result, err := tools.HandleBtcPrice(json.RawMessage("{}"))
+		if err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": gin.H{"message": "price source unavailable"}})
+			return
+		}
+		resultJSON, _ := json.Marshal(result)
+		c.JSON(http.StatusOK, gin.H{
+			"tool":   "btc_price",
+			"free":   true,
+			"note":   "In production an agent pays 10 sats (L402) or a fraction of a fiat credit for this call.",
+			"result": json.RawMessage(resultJSON),
+		})
+	})
 
 	addr := ":" + cfg.Port
 	log.Printf("loop-mcp v2 (safe build) listening on %s", addr)
