@@ -10,11 +10,11 @@ It is API-compatible with the popular x402-only MCP transport, with one material
 > [![Live](https://img.shields.io/badge/endpoint-live-success)](https://mcp.loopxxi.com/health)
 > [![MCP Registry](https://img.shields.io/badge/registry-com.loopxxi%2Floop--mcp-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=loop-mcp)
 
-## Live L402 deployment (v2.0.1)
+## Live deployment (v2.2.0)
 
-A **live, hosted** L402-only deployment is running with 4 paid tools. No API keys, no signup — the Lightning payment **is** the credential.
+A **live, hosted** deployment is running with paid tools on **two payment rails**: Lightning (L402) and fiat-funded credits via Stripe. No API keys, no signup — payment **is** the credential. A branded landing page and a free try endpoint are at `https://mcp.loopxxi.com/`.
 
-**Endpoint:** `https://mcp.loopxxi.com/mcp` · **Health:** `https://mcp.loopxxi.com/health`
+**Endpoint:** `https://mcp.loopxxi.com/mcp` · **Health:** `https://mcp.loopxxi.com/health` · **Landing:** `https://mcp.loopxxi.com/`
 
 | Tool | Sats | What it returns |
 |---|---|---|
@@ -22,6 +22,19 @@ A **live, hosted** L402-only deployment is running with 4 paid tools. No API key
 | `btc_send_decision` | 15 | A SEND_NOW / WAIT / URGENT_ONLY verdict with fee rates (sat/vB), mempool pressure, and estimated savings — one decision call instead of parsing multiple mempool endpoints. |
 | `lightning_address_resolve` | 10 | Resolve a Lightning Address (`user@domain.com`) to a payable BOLT11 for a given amount — the full LNURL-pay flow in one call. |
 | `tx_decode_explain` | 25 | Decode a Bitcoin tx by txid into a structured agent summary: type, fee, fee rate, confirmation status, RBF/SegWit/Taproot flags, and a one-line `agent_summary` ready for LLM context. Saves 500–2,000 tokens vs raw JSON. |
+
+### Two payment rails
+
+Agents pay per `tools/call` via either rail:
+
+- **Lightning (L402)** — `Authorization: L402 <token>:<preimage>`. 10–25 sats/call. The default; no account needed.
+- **Fiat credits (Stripe)** — `Authorization: Bearer loop_<credit_key>`. Buy a credit key at [`api.loopxxi.com/ai-credits`](https://api.loopxxi.com/ai-credits) ($10/$25/$50 packs → sats at the live BTC price). loop-mcp forwards the key to Loop Gateway's `POST /v1/credits/debit`, which atomically debits the prepaid sats ledger. Same 1:1 sats pricing as L402.
+
+A request with no auth returns `HTTP 402` with a Lightning invoice (L402) and, in the body, a pointer to the fiat refill URL. Insufficient fiat balance returns `402` with `refill_url: https://api.loopxxi.com/ai-credits`.
+
+### Free try (no wallet required)
+
+`POST https://mcp.loopxxi.com/try/btc_price` returns the live Bitcoin price for free — a read-only lead-gen endpoint so you can see a tool's output before wiring up payment.
 
 ### How to call (L402 flow)
 
@@ -92,7 +105,24 @@ const res2 = await fetch(ENDPOINT, {
 console.log(await res2.json());
 ```
 
-The live deployment source is in [`cmd/loop-mcp/`](./cmd/loop-mcp) and [`tools/`](./tools) (Go, L402-only). The dual-rail npm library below is the broader transport.
+#### Fiat credits (Stripe) — no Lightning wallet needed
+
+Buy a credit key at [`api.loopxxi.com/ai-credits`](https://api.loopxxi.com/ai-credits), then send it as a Bearer token. loop-mcp debits your prepaid sats balance on Loop Gateway and serves the result in a single call — no challenge/pay/retry round-trip.
+
+```bash
+# Buy a $10 pack → get a loop_<credit_key> (1000 credits → sats at live BTC price)
+curl -s -X POST https://api.loopxxi.com/v1/credits/checkout \
+  -H "Content-Type: application/json" -d '{"pack":"p10"}'
+# → {"credit_key":"loop_...","checkout_url":"https://buy.stripe.com/..."}
+# Complete payment on the Stripe page, then:
+
+curl -s -X POST https://mcp.loopxxi.com/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer loop_<credit_key>" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'
+```
+
+The live deployment source is in [`cmd/loop-mcp/`](./cmd/loop-mcp) and [`tools/`](./tools) (Go, dual-rail: L402 + fiat credit_key). The dual-rail npm library below is the broader transport.
 
 
 > ### The addition: a second rail — Lightning / L402
