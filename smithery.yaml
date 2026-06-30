@@ -1,0 +1,41 @@
+# Smithery manifest for loop-mcp
+# https://smithery.ai/docs/manifest
+
+name: loop-mcp
+title: loop-mcp — L402 Bitcoin/Lightning MCP Server
+description: >
+  L402-native MCP server with 5 paid Bitcoin/Lightning tools for AI agents.
+  Pay 10–25 sats per call via Lightning Network. No API keys, no accounts.
+  Tools: BTC price, fee send-decision (SEND_NOW/WAIT/URGENT_ONLY),
+  Lightning Address resolver, TX decoder, optimal send window.
+homepage: https://mcp.loopxxi.com
+repository: https://github.com/Loop-XXI/loop-mcp
+license: MIT
+
+server:
+  transport: http
+  url: https://mcp.loopxxi.com/mcp
+
+payment:
+  protocol: L402
+  currency: satoshis
+  pricing:
+    - tool: btc_price
+      sats: 10
+    - tool: btc_send_decision
+      sats: 15
+    - tool: lightning_address_resolve
+      sats: 10
+    - tool: tx_decode_explain
+      sats: 25
+    - tool: optimal_send_window
+      sats: 25
+
+tags:
+  - bitcoin
+  - lightning
+  - l402
+  - mcp
+  - micropayments
+  - model-context-protocol
+  - agent-payments
