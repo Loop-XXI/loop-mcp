@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>loop-mcp · L402 Playground</title>
+<meta name="description" content="Watch an AI agent pay for an MCP tool call with Bitcoin Lightning (L402) in three HTTP requests. Live against mcp.loopxxi.com." />
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#111418; --edge:#1c2026; --ink:#e7ebef;
+    --muted:#8a94a1; --accent:#f7931a; --ok:#5ecc7a; --warn:#e0a63b; --err:#ef6a6a;
+    --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --serif: "Iowan Old Style","Palatino Linotype",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;line-height:1.5}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px}
+  header{border-bottom:1px solid var(--edge);padding-bottom:20px;margin-bottom:28px}
+  .kicker{font-family:var(--mono);text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:var(--muted)}
+  h1{font-family:var(--serif);font-weight:600;font-size:32px;margin:6px 0 4px;line-height:1.15}
+  h2{font-family:var(--serif);font-weight:600;font-size:20px;margin:32px 0 10px}
+  p{color:#c8cfd7}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px dotted rgba(247,147,26,.5)}
+  a:hover{border-bottom-style:solid}
+  .lead{color:#c8cfd7;max-width:66ch}
+  .steps{counter-reset:step;margin-top:24px}
+  .step{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:18px 20px;margin:14px 0;position:relative}
+  .step::before{counter-increment:step;content:"Step " counter(step);font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+  .step h3{font-family:var(--serif);font-weight:600;font-size:18px;margin:4px 0 8px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  button{background:var(--accent);color:#111;border:0;padding:9px 14px;border-radius:7px;font-weight:600;cursor:pointer;font-size:14px}
+  button.secondary{background:transparent;color:var(--ink);border:1px solid var(--edge)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  input,textarea{background:#0f1216;color:var(--ink);border:1px solid var(--edge);border-radius:7px;padding:9px 11px;font-family:var(--mono);font-size:13px;width:100%}
+  pre{background:#0a0c0f;border:1px solid var(--edge);border-radius:7px;padding:12px 14px;overflow:auto;font-size:12.5px;color:#d3d9e0}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-family:var(--mono);font-size:12.5px;margin:8px 0 4px}
+  .kv b{color:var(--muted);font-weight:500}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;border:1px solid var(--edge);color:var(--muted)}
+  .ok{color:var(--ok);border-color:rgba(94,204,122,.4)}
+  .warn{color:var(--warn);border-color:rgba(224,166,59,.4)}
+  .err{color:var(--err);border-color:rgba(239,106,106,.4)}
+  .muted{color:var(--muted)}
+  .invoice{word-break:break-all;font-family:var(--mono);font-size:12px;background:#0a0c0f;border:1px solid var(--edge);border-radius:7px;padding:10px;margin-top:6px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr}}
+  footer{color:var(--muted);font-size:12.5px;margin-top:40px;border-top:1px solid var(--edge);padding-top:16px}
+  .qr{background:#fff;padding:8px;border-radius:8px;display:inline-block;margin-top:8px}
+  details{background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:10px 14px;margin:10px 0}
+  summary{cursor:pointer;color:var(--muted);font-family:var(--mono);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">loop-mcp · L402 Playground · live</div>
+  <h1>Pay for a real MCP tool call with Lightning, in three HTTP requests.</h1>
+  <p class="lead">This page speaks to <code>mcp.loopxxi.com</code> from your browser. You'll see the raw <code>HTTP 402</code> challenge, the BOLT11 invoice, and — once you pay it with any Lightning wallet and paste the preimage — the paid result served back. No accounts, no keys, no server-side JS. View source; it's ~230 lines.</p>
+</header>
+
+<div class="steps">
+
+<section class="step">
+  <h3>Fetch the paywalled tool</h3>
+  <p class="muted">Hit <code>GET https://mcp.loopxxi.com/l402/btc_price</code> with no auth. The server should answer <span class="badge warn">402 Payment Required</span>.</p>
+  <div class="row">
+    <button id="btn-challenge">Fetch challenge</button>
+    <span id="s1-status" class="badge muted">idle</span>
+  </div>
+  <div id="s1-out" style="display:none">
+    <div class="kv">
+      <b>status</b><span id="s1-code"></span>
+      <b>tool</b><span>btc_price</span>
+      <b>price</b><span id="s1-sats"></span>
+      <b>token</b><span id="s1-token" style="word-break:break-all;font-size:11.5px"></span>
+    </div>
+    <details>
+      <summary>Raw response headers &amp; body</summary>
+      <pre id="s1-raw"></pre>
+    </details>
+  </div>
+</section>
+
+<section class="step">
+  <h3>Pay the invoice with any Lightning wallet</h3>
+  <p class="muted">Copy the BOLT11 into Phoenix / Zeus / Wallet of Satoshi / LNbits / Alby / etc. It's a real invoice, expiring in minutes.</p>
+  <div id="invoice-box" class="invoice muted">Run step 1 first.</div>
+  <div class="row">
+    <button id="btn-copy" class="secondary" disabled>Copy invoice</button>
+    <a id="btn-wallet" class="secondary" style="display:none;padding:9px 14px;border-radius:7px;border:1px solid var(--edge);color:var(--ink)" href="#">Open in wallet (lightning:)</a>
+  </div>
+  <div id="qr-holder"></div>
+  <p class="muted" style="font-size:12.5px;margin-top:14px">After paying, your wallet returns a <b>preimage</b> — a 64-char hex string. Paste it below.</p>
+  <div class="row"><input id="preimage" placeholder="preimage (64 hex chars from your wallet)" spellcheck="false" /></div>
+</section>
+
+<section class="step">
+  <h3>Replay with <code>Authorization: L402 &lt;token&gt;:&lt;preimage&gt;</code></h3>
+  <p class="muted">The server verifies the preimage against the invoice hash <em>statelessly</em> — no session, no database. Same request, one header. That's the whole L402 flow.</p>
+  <div class="row">
+    <button id="btn-replay" disabled>Replay with L402 header</button>
+    <span id="s3-status" class="badge muted">idle</span>
+  </div>
+  <div id="s3-out" style="display:none">
+    <div class="kv">
+      <b>status</b><span id="s3-code"></span>
+    </div>
+    <pre id="s3-raw"></pre>
+  </div>
+</section>
+
+</div>
+
+<h2>What's happening under the hood</h2>
+<div class="grid2">
+  <div>
+    <p class="muted"><b>The 402 body carries</b> the sats price, the invoice, and a compact <b>token</b> of the form <code>&lt;paymentHash&gt;:&lt;tool&gt;:&lt;expiry&gt;:&lt;hmac&gt;</code>. The token binds the paid tool to a specific invoice hash and expiry, signed with a server-only HMAC.</p>
+    <p class="muted"><b>The retry header</b> is <code>Authorization: L402 &lt;token&gt;:&lt;preimage&gt;</code>. Split on the <em>last</em> colon — the preimage is a colon-free 64-char hex, but the token itself contains three colons.</p>
+    <p class="muted"><b>Statelessness.</b> The server hashes the preimage with SHA-256 and compares against the payment hash embedded in the token; if the token HMAC verifies and the hash matches, the call is served. No user table, no session, no key rotation.</p>
+  </div>
+  <div>
+    <p class="muted"><b>Pricing on this endpoint:</b> <code>btc_price</code> is 10 sats — well below one US cent. Other tools on the server (<code>btc_send_decision</code>, <code>lightning_address_resolve</code>, <code>tx_decode_explain</code>, <code>optimal_send_window</code>) sit in the 10–25 sat range.</p>
+    <p class="muted"><b>MCP transport:</b> the same paywall protects the streamable-HTTP MCP endpoint at <code>/mcp</code>. Agents wired to <code>mcp.loopxxi.com/mcp</code> get the exact same 402 → pay → retry loop on every <code>tools/call</code>.</p>
+    <p class="muted"><b>Alt rail:</b> if you'd rather pay by card once, credit keys at <code>api.loopxxi.com/ai-credits</code> use the same underlying sats accounting via <code>Authorization: Bearer loop_&lt;key&gt;</code>.</p>
+  </div>
+</div>
+
+<footer>
+  Playground is client-side only. Source: <a href="https://github.com/Loop-XXI/loop-mcp">github.com/Loop-XXI/loop-mcp</a> (MIT). Server health: <a href="https://mcp.loopxxi.com/health">mcp.loopxxi.com/health</a>. Contact: <a href="mailto:business@loopxxi.com">business@loopxxi.com</a>. Built by Loop XXI LLC.
+</footer>
+</div>
+
+<script>
+const BASE = "https://mcp.loopxxi.com";
+const ENDPOINT = BASE + "/l402/btc_price";
+
+let TOKEN = null;
+let INVOICE = null;
+
+function $(id){ return document.getElementById(id); }
+function setStatus(el,text,cls){
+  el.textContent = text;
+  el.className = "badge " + (cls || "muted");
+}
+
+async function fetchChallenge(){
+  const st = $("s1-status");
+  setStatus(st, "requesting…", "muted");
+  $("btn-challenge").disabled = true;
+  try {
+    const res = await fetch(ENDPOINT, {method:"GET"});
+    const text = await res.text();
+    let body = {};
+    try { body = JSON.parse(text); } catch (_){}
+    $("s1-out").style.display = "block";
+    $("s1-code").textContent = res.status + " " + res.statusText;
+    $("s1-sats").textContent = (body.sats != null) ? (body.sats + " sats") : "(missing)";
+    $("s1-token").textContent = body.token || "(missing)";
+    const hdrs = [];
+    res.headers.forEach((v,k)=>hdrs.push(k+": "+v));
+    $("s1-raw").textContent = "HTTP " + res.status + " " + res.statusText + "\n" + hdrs.join("\n") + "\n\n" + text;
+    if (res.status === 402 && body.token && body.payment_request){
+      TOKEN = body.token;
+      INVOICE = body.payment_request;
+      $("invoice-box").textContent = INVOICE;
+      $("invoice-box").classList.remove("muted");
+      $("btn-copy").disabled = false;
+      const wallet = $("btn-wallet");
+      wallet.href = "lightning:" + INVOICE;
+      wallet.style.display = "inline-block";
+      $("btn-replay").disabled = false;
+      setStatus(st, "402 · pay to continue", "warn");
+    } else if (res.status === 200) {
+      setStatus(st, "200 · already paid?", "ok");
+    } else {
+      setStatus(st, "unexpected " + res.status, "err");
+    }
+  } catch (e){
+    setStatus(st, "network error", "err");
+    $("s1-out").style.display = "block";
+    $("s1-raw").textContent = String(e);
+  } finally {
+    $("btn-challenge").disabled = false;
+  }
+}
+
+async function replay(){
+  const st = $("s3-status");
+  const preimage = ($("preimage").value || "").trim();
+  if (!TOKEN){ setStatus(st,"run step 1 first","err"); return; }
+  if (!/^[0-9a-fA-F]{64}$/.test(preimage)){ setStatus(st,"preimage must be 64 hex","err"); return; }
+  setStatus(st, "verifying…", "muted");
+  $("btn-replay").disabled = true;
+  try {
+    const res = await fetch(ENDPOINT, {
+      method:"GET",
+      headers: { "Authorization": "L402 " + TOKEN + ":" + preimage }
+    });
+    const text = await res.text();
+    $("s3-out").style.display = "block";
+    $("s3-code").textContent = res.status + " " + res.statusText;
+    $("s3-raw").textContent = text;
+    setStatus(st, res.status === 200 ? "200 · paid ✓" : "not paid (" + res.status + ")",
+              res.status === 200 ? "ok" : "err");
+  } catch (e){
+    setStatus(st, "network error", "err");
+    $("s3-out").style.display = "block";
+    $("s3-raw").textContent = String(e);
+  } finally {
+    $("btn-replay").disabled = false;
+  }
+}
+
+$("btn-challenge").addEventListener("click", fetchChallenge);
+$("btn-replay").addEventListener("click", replay);
+$("btn-copy").addEventListener("click", async ()=>{
+  if (!INVOICE) return;
+  try { await navigator.clipboard.writeText(INVOICE); $("btn-copy").textContent="copied"; setTimeout(()=>$("btn-copy").textContent="Copy invoice",1500); }
+  catch(e){ /* ignore */ }
+});
+</script>
+</body>
+</html>
