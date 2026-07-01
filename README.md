@@ -9,6 +9,9 @@ It is API-compatible with the popular x402-only MCP transport, with one material
 > ![L402-paid](https://img.shields.io/badge/tools-L402%20paid-ff9900?logo=lightning&logoColor=white)
 > [![Live](https://img.shields.io/badge/endpoint-live-success)](https://mcp.loopxxi.com/health)
 > [![MCP Registry](https://img.shields.io/badge/registry-com.loopxxi%2Floop--mcp-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=loop-mcp)
+> [![L402 Playground](https://img.shields.io/badge/try-L402%20Playground-ff9900)](https://loop-xxi.github.io/loop-mcp/example/playground/)
+> [![Reference clients](https://img.shields.io/badge/reference-Py%20%2B%20TS-blue)](https://github.com/Loop-XXI/loop-mcp/tree/main/example)
+
 
 ## Live deployment (v2.2.0)
 
