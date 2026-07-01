@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>loop-mcp · pay-per-call MCP tools over Bitcoin Lightning</title>
+<meta name="description" content="Five paid MCP tools priced 10–25 sats per call, over Lightning (L402) or a prepaid fiat credit key. No signup. Payment is the credential. By Loop XXI LLC." />
+<meta property="og:title" content="loop-mcp — pay-per-call MCP tools over Bitcoin Lightning" />
+<meta property="og:description" content="Five paid MCP tools priced 10–25 sats per call. HTTP 402 → pay → retry. Live at mcp.loopxxi.com. MIT source." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://loop-xxi.github.io/loop-mcp/" />
+<link rel="canonical" href="https://loop-xxi.github.io/loop-mcp/" />
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#111418; --edge:#1c2026; --ink:#e7ebef;
+    --muted:#8a94a1; --accent:#f7931a; --accent2:#ffc36b; --ok:#5ecc7a;
+    --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --serif: "Iowan Old Style","Palatino Linotype",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;line-height:1.55}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px dotted rgba(247,147,26,.45)}
+  a:hover{border-bottom-style:solid}
+  code{font-family:var(--mono);font-size:0.92em;background:#0a0c0f;border:1px solid var(--edge);padding:1px 6px;border-radius:5px}
+  pre{background:#0a0c0f;border:1px solid var(--edge);border-radius:9px;padding:14px 16px;overflow:auto;font-size:12.5px;color:#d3d9e0}
+  pre code{background:transparent;border:0;padding:0}
+  .wrap{max-width:960px;margin:0 auto;padding:44px 22px 80px}
+  .kicker{font-family:var(--mono);text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:var(--muted)}
+  h1{font-family:var(--serif);font-weight:600;font-size:40px;line-height:1.1;margin:8px 0 14px;letter-spacing:-0.01em}
+  h1 .accent{color:var(--accent)}
+  h2{font-family:var(--serif);font-weight:600;font-size:22px;margin:38px 0 12px}
+  h3{font-family:var(--serif);font-weight:600;font-size:16px;margin:22px 0 8px}
+  .lead{color:#c8cfd7;font-size:17px;max-width:66ch}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .badge{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;border:1px solid var(--edge);color:var(--muted);background:var(--panel)}
+  .badge b{color:var(--ink);font-weight:600;margin-right:6px}
+  .badge.ok{color:var(--ok);border-color:rgba(94,204,122,.4)}
+  .cta{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 8px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 15px;border-radius:8px;font-weight:600;font-size:14.5px;border:1px solid var(--edge);color:var(--ink);background:transparent;border-bottom:1px solid var(--edge)}
+  .btn:hover{border-color:var(--accent);color:var(--ink)}
+  .btn.primary{background:var(--accent);color:#111;border-color:var(--accent);border-bottom-color:var(--accent)}
+  .btn.primary:hover{background:var(--accent2);border-color:var(--accent2)}
+  table{border-collapse:collapse;width:100%;margin:6px 0 4px;font-size:14.5px}
+  th,td{padding:9px 12px;border-bottom:1px solid var(--edge);text-align:left;vertical-align:top}
+  th{font-family:var(--mono);font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500}
+  tr:last-child td{border-bottom:0}
+  td.tool{font-family:var(--mono);color:#ffd7a8;white-space:nowrap}
+  td.price{font-family:var(--mono);color:var(--accent);white-space:nowrap;text-align:right;width:70px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:16px 18px}
+  .card h3{margin-top:0}
+  .muted{color:var(--muted);font-size:13.5px}
+  header{border-bottom:1px solid var(--edge);padding-bottom:26px;margin-bottom:6px}
+  footer{color:var(--muted);font-size:13px;margin-top:44px;border-top:1px solid var(--edge);padding-top:18px}
+  .mark{color:var(--accent);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">loop-mcp · live · v2.2.0</div>
+  <h1>Pay-per-call MCP tools over <span class="accent">Bitcoin Lightning</span>.</h1>
+  <p class="lead">Five Bitcoin/Lightning tools an agent can call for <b>10–25 satoshis apiece</b> — well below one US cent per call. Every paid endpoint answers <code>HTTP 402</code> with a real BOLT11 invoice; pay it in any Lightning wallet, retry with the preimage, get the result. <b>Payment is the credential.</b> No signup, no API keys, no accounts.</p>
+  <div class="badges">
+    <span class="badge ok"><b>health</b>{"status":"ok","version":"2.2.0"}</span>
+    <span class="badge"><b>registry</b>com.loopxxi/loop-mcp</span>
+    <span class="badge"><b>license</b>MIT</span>
+    <span class="badge"><b>by</b>Loop XXI LLC</span>
+  </div>
+  <div class="cta">
+    <a class="btn primary" href="./example/playground/">Try it — L402 Playground</a>
+    <a class="btn" href="https://mcp.loopxxi.com/mcp"><code>mcp.loopxxi.com/mcp</code></a>
+    <a class="btn" href="https://github.com/Loop-XXI/loop-mcp">Source · GitHub</a>
+    <a class="btn" href="https://registry.modelcontextprotocol.io/v0/servers?search=loop-mcp">MCP Registry</a>
+  </div>
+  <p class="muted" style="margin-top:8px">The Playground is a self-contained static page (~230 lines) that walks you through the full paid flow against this live server. Nothing to install.</p>
+</header>
+
+<h2>The five paid tools</h2>
+<table>
+  <thead><tr><th>Tool</th><th>What it returns</th><th style="text-align:right">Sats</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="tool">btc_price</td>
+      <td>Current Bitcoin price in USD + major fiat currencies, from mempool.space.</td>
+      <td class="price">10</td>
+    </tr>
+    <tr>
+      <td class="tool">btc_send_decision</td>
+      <td>Composite verdict — SEND_NOW / WAIT / URGENT_ONLY — with fee rates in sat/vB, mempool pressure, and estimated savings if you wait. One decision call instead of parsing multiple mempool endpoints.</td>
+      <td class="price">15</td>
+    </tr>
+    <tr>
+      <td class="tool">lightning_address_resolve</td>
+      <td>Resolve a Lightning Address (<code>user@domain.com</code>) to a payable BOLT11 for a given amount. Full LNURL-pay flow in one call.</td>
+      <td class="price">10</td>
+    </tr>
+    <tr>
+      <td class="tool">tx_decode_explain</td>
+      <td>Structured, agent-ready summary of a Bitcoin transaction: type, fee, fee rate, confirmation status, RBF / SegWit / Taproot flags, plus a one-line <code>agent_summary</code>. Saves 500–2,000 tokens vs raw JSON.</td>
+      <td class="price">25</td>
+    </tr>
+    <tr>
+      <td class="tool">optimal_send_window</td>
+      <td>Timing intelligence — recommended UTC send window, fee trajectory (rising/stable/falling) with a confidence score, confirmation targets for 3/6/144 blocks, and an RBF-viability flag.</td>
+      <td class="price">25</td>
+    </tr>
+  </tbody>
+</table>
+<p class="muted"><a href="https://mcp.loopxxi.com/try/btc_price">Free-try endpoint</a>: <code>POST /try/btc_price</code> returns the live Bitcoin price with no wallet attached — a preview of a tool's shape before wiring up payment.</p>
+
+<h2>Two payment rails</h2>
+<div class="grid2">
+  <div class="card">
+    <h3>Lightning · L402</h3>
+    <p class="muted">The default. On the first unauthenticated request, the server returns <code>HTTP 402</code> with a BOLT11 invoice and an L402 token. Pay the invoice with any Lightning wallet — Phoenix, Zeus, Wallet of Satoshi, Alby, LNbits — then retry the same request with:</p>
+    <pre><code>Authorization: L402 &lt;token&gt;:&lt;preimage&gt;</code></pre>
+    <p class="muted">Verification is stateless — the server SHA-256s your preimage and checks the token HMAC. No sessions, no accounts, nothing durable for an attacker to steal.</p>
+  </div>
+  <div class="card">
+    <h3>Fiat credits · Bearer</h3>
+    <p class="muted">If you'd rather pay by card once and forget it, buy a credit pack at <a href="https://api.loopxxi.com/ai-credits">api.loopxxi.com/ai-credits</a> ($10 / $25 / $50 → sats at the live BTC price). You get a key of the form <code>loop_…</code>. Send:</p>
+    <pre><code>Authorization: Bearer loop_&lt;key&gt;</code></pre>
+    <p class="muted">Same per-call sats price, deducted from your prepaid balance. Loop Gateway does the atomic debit against the sats ledger.</p>
+  </div>
+</div>
+
+<h2>60-second demo — pay a tool call by hand</h2>
+<pre><code># 1. Challenge — HTTP 402 with a real BOLT11 + token
+curl -i https://mcp.loopxxi.com/l402/btc_price
+
+# 2. Pay the payment_request in any Lightning wallet → get a 64-hex preimage
+
+# 3. Retry with the L402 header
+curl -i https://mcp.loopxxi.com/l402/btc_price \
+  -H "Authorization: L402 &lt;token&gt;:&lt;preimage&gt;"
+</code></pre>
+<p class="muted">Prefer to click? Open the <a href="./example/playground/">L402 Playground</a> and watch your own 10 sats turn into an <code>HTTP 200</code> response. Prefer to import a library? See the zero-dependency <a href="https://github.com/Loop-XXI/loop-mcp/blob/main/example/client.py">Python client</a> and <a href="https://github.com/Loop-XXI/loop-mcp/blob/main/example/client.ts">TypeScript client</a> — MIT, ~150 lines each.</p>
+
+<h2>Wiring loop-mcp into a coding agent</h2>
+<p class="muted">loop-mcp is a <b>remote HTTPS MCP server</b> — nothing to install locally. Point any MCP-aware client at the endpoint:</p>
+<pre><code>{
+  "mcpServers": {
+    "loop-mcp": {
+      "url": "https://mcp.loopxxi.com/mcp",
+      "transport": "streamable-http"
+    }
+  }
+}</code></pre>
+<p class="muted">Works with Cline, Roo Code, Cursor, Windsurf, Claude Desktop — any client that speaks streamable-HTTP MCP. The repo ships an <a href="https://github.com/Loop-XXI/loop-mcp/blob/main/llms-install.md"><code>llms-install.md</code></a> that walks a coding agent through the exact configuration.</p>
+
+<h2>Where to go from here</h2>
+<div class="grid2">
+  <div class="card">
+    <h3>For developers</h3>
+    <p class="muted">Read the <a href="https://github.com/Loop-XXI/loop-mcp#readme">README</a>, run the <a href="./example/playground/">Playground</a>, or copy the <a href="https://github.com/Loop-XXI/loop-mcp/tree/main/example">reference clients</a>. Everything is MIT — fork it, point it at your own server, sell your own tools.</p>
+  </div>
+  <div class="card">
+    <h3>For agents</h3>
+    <p class="muted">The MCP endpoint at <a href="https://mcp.loopxxi.com/mcp"><code>mcp.loopxxi.com/mcp</code></a> speaks streamable-HTTP MCP and issues an L402 challenge on every paid <code>tools/call</code>. The registry entry is <code>com.loopxxi/loop-mcp</code>.</p>
+  </div>
+</div>
+
+<footer>
+  Maintained by <b>Loop XXI LLC</b>. Business contact: <a href="mailto:business@loopxxi.com">business@loopxxi.com</a>. Source (MIT): <a href="https://github.com/Loop-XXI/loop-mcp">github.com/Loop-XXI/loop-mcp</a>. Health: <a href="https://mcp.loopxxi.com/health">mcp.loopxxi.com/health</a>. Registry: <a href="https://registry.modelcontextprotocol.io/v0/servers?search=loop-mcp">com.loopxxi/loop-mcp</a>.
+</footer>
+
+</div>
+</body>
+</html>
