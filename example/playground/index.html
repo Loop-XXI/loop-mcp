@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>loop-mcp · L402 Playground</title>
+<title>L402 Playground · loop-mcp</title>
 <meta name="description" content="Watch an AI agent pay for an MCP tool call with Bitcoin Lightning (L402) in three HTTP requests. Live against mcp.loopxxi.com." />
 <style>
   :root{
@@ -110,6 +110,12 @@
 
 </div>
 
+<div id="cors-fallback" style="display:none;background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--warn);border-radius:8px;padding:14px 16px;margin:16px 0">
+  <b style="color:var(--warn)">Fetch blocked in your browser.</b>
+  <p class="muted" style="margin:6px 0 8px">The server didn't send a CORS header this page's origin can read. Nothing is wrong with the paywall — <code>curl</code> and any non-browser client see the 402 fine. A fix is in-flight: <a href="https://github.com/Loop-XXI/loop-mcp/pull/1">Loop-XXI/loop-mcp#1</a>.</p>
+  <pre style="margin:6px 0 0">curl -i https://mcp.loopxxi.com/l402/btc_price</pre>
+</div>
+
 <h2>What's happening under the hood</h2>
 <div class="grid2">
   <div>
@@ -175,9 +181,13 @@ async function fetchChallenge(){
       setStatus(st, "unexpected " + res.status, "err");
     }
   } catch (e){
-    setStatus(st, "network error", "err");
+    setStatus(st, "blocked (CORS?) — see fallback", "err");
     $("s1-out").style.display = "block";
-    $("s1-raw").textContent = String(e);
+    $("s1-code").textContent = "—";
+    $("s1-sats").textContent = "—";
+    $("s1-token").textContent = "—";
+    $("s1-raw").textContent = "Browser fetch failed: " + String(e) + "\n\nThis usually means the server hasn't sent an Access-Control-Allow-Origin header for this page's origin, so the browser refuses to expose the response. The server is fine — the paywall works from any non-browser client. Use the curl fallback below to see the same 402 challenge, or watch https://github.com/Loop-XXI/loop-mcp/pull/1 for the CORS fix.";
+    document.getElementById('cors-fallback').style.display = 'block';
   } finally {
     $("btn-challenge").disabled = false;
   }
