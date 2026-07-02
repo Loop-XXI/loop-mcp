@@ -162,18 +162,15 @@ Both rails resolve to one **`LoopLedger`** with a `rail` tag on every row, so x4
 
 ## Install
 
-The **hosted server is live now — no install needed.** Point any MCP / L402 client at `https://mcp.loopxxi.com/mcp` and pay per call (see [How to call](#how-to-call-l402-flow) above). This is the fastest way to make a real paid tool call today.
+The **hosted server is live now** — for an immediate paid tool call, point any MCP / L402 client at `https://mcp.loopxxi.com/mcp` (see [How to call](#how-to-call-l402-flow) above), no install required.
 
-The standalone dual-rail transport library shown below is **not yet published to npm** — install it from source:
+To embed the dual-rail transport in your own MCP server, install from npm:
 
 ```bash
-git clone https://github.com/Loop-XXI/loop-mcp
-cd loop-mcp && npm install
-node scripts/demo-core.mjs      # zero-dependency proof of the payment core
-# peer dependency for embedding: npm install @modelcontextprotocol/sdk
+npm install @loop-xxi/loop-mcp
+# peer dependency
+npm install @modelcontextprotocol/sdk
 ```
-
-> The `@loop-xxi/loop-mcp` npm release is planned. Until then, the code samples below document the library API as it lives in [`src/`](./src); import paths resolve once you build from source.
 
 ## Server — make any MCP tool payable on both rails
 
