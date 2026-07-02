@@ -67,6 +67,56 @@ func mustEnv(key string) string {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// MCP server card (Smithery / directory metadata)
+// ────────────────────────────────────────────────────────────────────────────
+
+// serverCard mirrors the MCP server-card schema used by Smithery and other
+// registry crawlers. Prices are read from the tools package so they stay in
+// sync with the production gate.
+func serveServerCard(c *gin.Context) {
+	toolList := make([]gin.H, 0, len(tools.All()))
+	for _, t := range tools.All() {
+		toolList = append(toolList, gin.H{
+			"name":        t.Name,
+			"description": t.Description,
+			"inputSchema": t.InputSchema,
+			"price": gin.H{
+				"currency": "sats",
+				"amount":   t.SatsPrice,
+			},
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"schema_version": "1.0",
+		"id":             "loop-mcp",
+		"name":           "loop-mcp",
+		"version":        "2.2.0",
+		"description":    "L402-native MCP server where AI agents pay per Bitcoin/Lightning tool call in sats or fiat credits.",
+		"license":        "MIT",
+		"provider": gin.H{
+			"name":    "Loop XXI LLC",
+			"email":   "business@loopxxi.com",
+			"url":     "https://loopxxi.com",
+		},
+		"repository": gin.H{
+			"type": "git",
+			"url":  "https://github.com/Loop-XXI/loop-mcp",
+		},
+		"endpoints": []gin.H{
+			{
+				"url":              "https://mcp.loopxxi.com/mcp",
+				"transport":        "streamable-http",
+				"protocol_version": "2024-11-05",
+				"authentication":   "L402",
+				"auth_model":       "payment-required",
+			},
+		},
+		"tools": toolList,
+	})
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // L402 macaroon helpers
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -594,6 +644,13 @@ func main() {
 	// Health check — no auth
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "version": "2.2.0"})
+	})
+
+	// MCP server card — Smithery / catalog scanner metadata.
+	// Served at both route prefixes so mcp.loopxxi.com and the Railway domain
+	// both satisfy scanners without path rewriting.
+	r.GET("/.well-known/mcp/server-card.json", func(c *gin.Context) {
+		serveServerCard(c)
 	})
 
 	// Satring domain verification challenge — no auth.
