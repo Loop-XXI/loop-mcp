@@ -111,16 +111,14 @@ export async function callToolWithCredit(
 /*                                    CLI                                     */
 /* -------------------------------------------------------------------------- */
 
-declare const require: any;
-declare const module: any;
-
+const runtimeProcess = (globalThis as any).process;
+const invokedPath = runtimeProcess?.argv?.[1];
 const isMain =
-  typeof require !== "undefined" &&
-  typeof module !== "undefined" &&
-  require.main === module;
+  typeof invokedPath === "string" &&
+  decodeURIComponent(new URL(import.meta.url).pathname) === invokedPath;
 
 if (isMain) {
-  const args = (globalThis as any).process?.argv?.slice(2) ?? [];
+  const args = runtimeProcess?.argv?.slice(2) ?? [];
   const get = (k: string): string | undefined => {
     const i = args.indexOf(k);
     return i >= 0 ? args[i + 1] : undefined;
@@ -137,7 +135,7 @@ if (isMain) {
     } catch (e) {
       const err = e as FiatCreditError;
       console.error(`FiatCredit: ${err.message}`);
-      (globalThis as any).process?.exit?.(2);
+      runtimeProcess?.exit?.(2);
     }
   })();
 }
