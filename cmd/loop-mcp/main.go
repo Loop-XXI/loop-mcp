@@ -557,6 +557,31 @@ const landingHTML = `<!doctype html>
 // Main
 // ────────────────────────────────────────────────────────────────────────────
 
+// corsMiddleware sets permissive CORS headers so the L402 Playground and
+// browser-based agents can read HTTP 402 challenges and paid responses.
+// The paid endpoints are already public and stateless; nothing exposed here
+// weakens the L402 gate. Wildcard origin is safe because there is no
+// cookie-based auth to steal — payment IS the credential.
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if origin == "" {
+			origin = "*"
+		}
+		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Vary", "Origin")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		c.Header("Access-Control-Expose-Headers", "WWW-Authenticate")
+		c.Header("Access-Control-Max-Age", "600")
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	}
+}
+
 func main() {
 	cfg := loadConfig()
 
@@ -564,6 +589,7 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
+	r.Use(corsMiddleware())
 
 	// Health check — no auth
 	r.GET("/health", func(c *gin.Context) {
