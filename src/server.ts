@@ -25,6 +25,7 @@ import {
   type FacilitatorConfig,
   type PaymentPayload,
   type PaymentRequirements,
+  type Network,
   type Price,
   type SPLTokenAmount,
   settleResponseHeader,
@@ -287,7 +288,7 @@ export class LoopDualRailServerTransport extends StreamableHTTPServerTransport {
     let wwwAuth: string | undefined;
 
     if (this.lightning) {
-      const usd = parseUsdPrice(toolPrice);
+      const usd = parseUsdPrice(toolPrice as string);
       const { sats } = usdToSats(usd, this.lightning.btcUsdPrice);
       const offer = await createL402Offer({
         secret: this.lightning.l402Secret,
@@ -329,7 +330,7 @@ export class LoopDualRailServerTransport extends StreamableHTTPServerTransport {
   }
 
   private getX402RequirementsForTool(toolName: string, price: Price): PaymentRequirements[] {
-    const network = this.network;
+    const network = this.network as Network;
     const atomicAmountForAsset = processPriceToAtomicAmount(price, network);
     if ('error' in atomicAmountForAsset) {
       throw new Error(atomicAmountForAsset.error);
