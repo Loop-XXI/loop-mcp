@@ -5,6 +5,7 @@ Minimal, zero-runtime-dependency reference clients for the live `mcp.loopxxi.com
 - `loop_mcp_l402_client.py` — Python 3.9+ (uses only the standard library)
 - `loop_mcp_l402_client.ts` — TypeScript / Node 18+ (uses built-in `fetch`)
 - `fiat-credit-client.ts` — TypeScript / Node 18+ (uses built-in `fetch`)
+- `agent-payment-preflight.mjs` — Node 18+ (uses built-in `fetch`)
 
 ## L402 clients (Lightning)
 
@@ -14,7 +15,7 @@ Both L402 clients implement the same three steps:
 1. GET /l402/btc_price                       →  HTTP 402 + BOLT11 invoice + token
 2. Pay the invoice (any Lightning wallet)    →  preimage (64-hex)
 3. GET /l402/btc_price
-   Authorization: L402 <token...age>    →  HTTP 200 + tool result
+   Authorization: L402 ***    →  HTTP 200 + tool result
 ```
 
 ### Python — quickstart
@@ -56,7 +57,7 @@ console.log(result); // → { usd: 68941.23, … }
 
 ## Fiat-credit client (Stripe)
 
-No Lightning wallet required. Buy a credit key at https://api.loopxxi.com/ai-credits, then call the MCP endpoint with `Authorization: Bearer loop_<credit_key>`. The server debits your prepaid sats balance and returns the tool result in one request.
+No Lightning wallet required. Buy a credit key at https://api.loopxxi.com/ai-credits, then call the MCP endpoint with `Authorization: Bearer loop_<...y>`. The server debits your prepaid sats balance and returns the tool result in one request.
 
 ```bash
 # Buy credits at https://api.loopxxi.com/ai-credits
@@ -65,6 +66,25 @@ npx tsx example/fiat-credit-client.ts
 ```
 
 With a depleted or invalid key the client prints a refill message pointing back to the credit top-up URL.
+
+## Buyer-agent payment preflight
+
+`agent-payment-preflight.mjs` is a dependency-free Node 18+ script that fetches the machine-readable manifest, validates the agent's sats budget, and decides `OK_TO_PAY` or `DO_NOT_PAY` before any invoice is paid.
+
+```bash
+# Default manifest + 25-sats budget
+node agent-payment-preflight.mjs
+
+# Custom manifest URL / budget
+node agent-payment-preflight.mjs https://mcp.loopxxi.com/agent-payments.json --max-sats=50
+```
+
+Machine-readable endpoints:
+
+- `https://mcp.loopxxi.com/.well-known/agent-payments.json`
+- `https://mcp.loopxxi.com/agent-payments.json`
+
+The script never pays; it only reads the manifest and prints a go/no-go decision.
 
 Or import as a library:
 

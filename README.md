@@ -40,6 +40,25 @@ A request with no auth returns `HTTP 402` with a Lightning invoice (L402) and, i
 
 `POST https://mcp.loopxxi.com/try/btc_price` returns the live Bitcoin price for free — a read-only lead-gen endpoint so you can see a tool's output before wiring up payment.
 
+### Agent payment preflight
+
+Any buyer agent should fetch the machine-readable payment manifest before paying:
+
+- `https://mcp.loopxxi.com/.well-known/agent-payments.json`
+- `https://mcp.loopxxi.com/agent-payments.json`
+
+A dependency-free preflight script is provided in [`example/agent-payment-preflight.mjs`](./example/agent-payment-preflight.mjs). It checks the manifest, prints the provider / rails / tool table, and exits `OK_TO_PAY` or `DO_NOT_PAY` if the manifest `max_price_sats` exceeds a configurable sats budget.
+
+```bash
+# Default manifest and 25-sats budget
+node example/agent-payment-preflight.mjs
+
+# Custom manifest URL and budget
+node example/agent-payment-preflight.mjs https://mcp.loopxxi.com/agent-payments.json --max-sats=50
+```
+
+The script never pays — it only reads the manifest and makes a go/no-go decision.
+
 ### How to call (L402 flow)
 
 The agent flow is three HTTP calls: **challenge → pay → retry**. On the first `tools/call` with no payment, the server returns `HTTP 402` with a BOLT11 invoice and an L402 token. Pay the invoice over Lightning, then retry the same request with `Authorization: L402 <token>:<preimage>`. The server verifies the preimage statelessly and serves the result. No database, no session.
