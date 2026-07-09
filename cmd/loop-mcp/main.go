@@ -70,9 +70,9 @@ func mustEnv(key string) string {
 // MCP server card (Smithery / directory metadata)
 // ────────────────────────────────────────────────────────────────────────────
 
-// serverCard mirrors the MCP server-card schema used by Smithery and other
-// registry crawlers. Prices are read from the tools package so they stay in
-// sync with the production gate.
+// serveServerCard serves the MCP server-card metadata used by Smithery and
+// registry crawlers. Prices are read from tools.All() so they stay in sync
+// with the production gate.
 func serveServerCard(c *gin.Context) {
 	toolList := make([]gin.H, 0, len(tools.All()))
 	for _, t := range tools.All() {
@@ -114,6 +114,104 @@ func serveServerCard(c *gin.Context) {
 			},
 		},
 		"tools": toolList,
+	})
+}
+
+// serveAgentPaymentManifest serves machine-readable payment metadata for buyer
+// agents. It is generated from tools.All() so the price/tool list is always
+// current. Routes: GET /.well-known/agent-payments.json and
+// GET /agent-payments.json.
+func serveAgentPaymentManifest(c *gin.Context) {
+	maxPrice := int64(0)
+	toolList := make([]gin.H, 0, len(tools.All()))
+	for _, t := range tools.All() {
+		if t.SatsPrice > maxPrice {
+			maxPrice = t.SatsPrice
+		}
+		toolList = append(toolList, gin.H{
+			"name":         t.Name,
+			"description":  t.Description,
+			"input_schema": t.InputSchema,
+			"price_sats":   t.SatsPrice,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"schema_version": "1.0.0",
+		"provider": gin.H{
+			"name":  "Loop XXI LLC",
+			"url":   "https://loopxxi.com",
+			"email": "business@loopxxi.com",
+		},
+		"service": gin.H{
+			"id":          "loop-mcp",
+			"name":        "loop-mcp",
+			"version":     "2.2.0",
+			"description": "L402-native MCP server where AI agents pay per Bitcoin/Lightning tool call in sats or fiat credits.",
+		},
+		"endpoints": []gin.H{
+			{
+				"type":                 "mcp",
+				"url":                  "https://mcp.loopxxi.com/mcp",
+				"transport":            "streamable-http",
+				"protocol_version":     "2024-11-05",
+				"authentication":       "L402",
+				"auth_model":           "payment-required",
+				"payment_requirement": "per-request",
+			},
+			{
+				"type":            "rest",
+				"url":             "https://mcp.loopxxi.com/l402/btc_price",
+				"transport":       "https",
+				"authentication":  "L402",
+				"auth_model":      "payment-required",
+				"tool":            "btc_price",
+				"description":     "Read-only REST probe endpoint for btc_price. Returns 402 with Lightning invoice if unpaid.",
+			},
+		},
+		"payment_rails": []gin.H{
+			{
+				"name":          "L402 Lightning",
+				"type":          "lightning",
+				"description":   "Pay per call via BOLT11 invoice. Re-present Authorization: L402 <token>:<preimage> after payment.",
+				"currency":      "BTC",
+				"unit":          "sat",
+				"pricing_model": "per-request",
+			},
+			{
+				"name":          "Fiat credits",
+				"type":          "bearer_token",
+				"description":   "Prepaid fiat credit keys issued by Loop Gateway. Use Authorization: Bearer loop_<credit_key>.",
+				"currency":      "USD",
+				"unit":          "credit",
+				"pricing_model": "per-request-debit",
+			},
+		},
+		"safety_and_terms": gin.H{
+			"billing_model":          "Per-request pricing. No subscription, no recurring charges.",
+			"max_price_sats":         maxPrice,
+			"personal_data_required": false,
+			"payment_is_credential":  true,
+			"refund_policy":          "All sales are final once a tool result is delivered. Disputes to business@loopxxi.com.",
+			"contact":                "business@loopxxi.com",
+			"terms_url":              "https://loopxxi.com/terms",
+			"privacy_url":            "https://loopxxi.com/privacy",
+		},
+		"tools": toolList,
+		"examples": gin.H{
+			"preflight": "curl -s https://mcp.loopxxi.com/.well-known/agent-payments.json",
+			"l402_flow": []string{
+				"# 1. Call without auth → receive 402 + invoice + token",
+				"curl -X POST https://mcp.loopxxi.com/mcp -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"btc_price\",\"arguments\":{}}}'",
+				"# 2. Pay the BOLT11 invoice out-of-band, then retry with proof",
+				"curl -X POST https://mcp.loopxxi.com/mcp -H 'Content-Type: application/json' -H 'Authorization: L402 <TOKEN>:<PREIMAGE>' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"btc_price\",\"arguments\":{}}}'",
+			},
+			"fiat_credit_flow": []string{
+				"# 1. Obtain a loop_ credit key from Loop Gateway",
+				"# 2. Use the credit key as Bearer token on every call",
+				"curl -X POST https://mcp.loopxxi.com/mcp -H 'Content-Type: application/json' -H 'Authorization: Bearer loop_<CREDIT_KEY>' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"btc_price\",\"arguments\":{}}}'",
+			},
+		},
 	})
 }
 
@@ -232,9 +330,9 @@ func mcpErr(id interface{}, code int, msg string) MCPResponse {
 // gatewayDebitResponse is the response from POST /v1/credits/debit on Loop Gateway.
 type gatewayDebitResponse struct {
 	Status      string `json:"status"`
-	Tool       string `json:"tool"`
-	DebitedSats int64 `json:"debited_sats"`
-	BalanceSats int64 `json:"balance_sats"`
+	Tool        string `json:"tool"`
+	DebitedSats int64  `json:"debited_sats"`
+	BalanceSats int64  `json:"balance_sats"`
 }
 
 // debitGatewayCredit atomically debits sats from a prepaid account via Loop
@@ -245,7 +343,7 @@ type gatewayDebitResponse struct {
 func debitGatewayCredit(cfg Config, creditKey string, toolName string, sats int64) (bool, error) {
 	body, _ := json.Marshal(map[string]interface{}{
 		"amount_sats": sats,
-		"tool":       toolName,
+		"tool":        toolName,
 	})
 	req, err := http.NewRequest("POST", cfg.GatewayURL+"/v1/credits/debit", strings.NewReader(string(body)))
 	if err != nil {
@@ -269,7 +367,7 @@ func debitGatewayCredit(cfg Config, creditKey string, toolName string, sats int6
 
 // l402Middleware:
 //  1. Parses the MCP request body and stores it in Gin context.
-//  2. For tools/call: verifies Authorization: L402 <token>:<preimage>.
+//  2. For tools/call: verifies Authorization: L402 <token...ge>.
 //  3. If absent/invalid: creates a phoenixd invoice and returns HTTP 402.
 //  4. If valid: injects toolName + toolArgs into context and calls Next().
 func l402Middleware(cfg Config) gin.HandlerFunc {
@@ -315,10 +413,10 @@ func l402Middleware(cfg Config) gin.HandlerFunc {
 			if !ok {
 				c.JSON(http.StatusPaymentRequired, gin.H{
 					"error": gin.H{
-						"code":         402,
-						"message":      "Insufficient credit balance. Top up at https://api.loopxxi.com/ai-credits",
-						"type":         "insufficient_funds",
-						"refill_url":   "https://api.loopxxi.com/ai-credits",
+						"code":           402,
+						"message":        "Insufficient credit balance. Top up at https://api.loopxxi.com/ai-credits",
+						"type":           "insufficient_funds",
+						"refill_url":     "https://api.loopxxi.com/ai-credits",
 						"requested_sats": tool.SatsPrice,
 					},
 				})
@@ -374,7 +472,7 @@ func l402Middleware(cfg Config) gin.HandlerFunc {
 				"payment_request": bolt11,
 				"token":           token,
 				"sats":            tool.SatsPrice,
-				"instructions":    "Pay the BOLT11 invoice, then retry with Authorization: L402 <token>:<preimage>",
+				"instructions":    "Pay the BOLT11 invoice, then retry with Authorization: L402 <token...ge>",
 			},
 		})
 		c.Abort()
@@ -516,7 +614,7 @@ func handleRESTL402Tool(cfg Config, toolName string) gin.HandlerFunc {
 			"payment_request": bolt11,
 			"token":           token,
 			"sats":            tool.SatsPrice,
-			"instructions":    "Pay the BOLT11 invoice, then retry with Authorization: L402 <token>:<preimage>",
+			"instructions":    "Pay the BOLT11 invoice, then retry with Authorization: L402 <token...ge>",
 		})
 	}
 }
@@ -599,7 +697,7 @@ const landingHTML = `<!doctype html>
 <header><div class="wrap"><a href="https://loopxxi.com" class="brand">loop-mcp <span>by LoopXXI</span></a><ul class="nav-links"><li><a href="https://github.com/Loop-XXI/loop-mcp">GitHub</a></li><li><a href="https://loopxxi.com">LoopXXI</a></li></ul></div></header>
 <div class="wrap"><div class="hero"><div class="pill"><span class="dot"></span>Live · v2.2.0</div><h1>Paid tools for autonomous AI agents.</h1><p>An L402-native MCP server where agents pay per tool call — 10 to 25 sats over Lightning, or fiat-funded credits via Stripe. Payment is the credential: no API keys, no accounts. The first MCP server on the official Registry that charges agents directly.</p><div class="rails"><div class="rail"><strong>Lightning (L402)</strong> — 10-25 sats/call</div><div class="rail"><strong>Stripe credits</strong> — <a href="https://api.loopxxi.com/ai-credits">buy a key</a></div></div></div>
 <section><h2>Live tools</h2><div class="tools"><div class="tool"><div class="tool-head"><span class="tool-name">btc_price</span><span class="tool-price">10 sats</span></div><div class="tool-desc">Current Bitcoin price in USD and major fiat currencies. Source: mempool.space.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">btc_send_decision</span><span class="tool-price">15 sats</span></div><div class="tool-desc">Send-or-wait verdict with fee rates, mempool pressure, and estimated savings. One call replaces parsing multiple mempool endpoints.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">lightning_address_resolve</span><span class="tool-price">10 sats</span></div><div class="tool-desc">Resolve a Lightning Address to a payable BOLT11 invoice. Full LNURL-pay protocol in one call.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">tx_decode_explain</span><span class="tool-price">25 sats</span></div><div class="tool-desc">Fetch a Bitcoin transaction by txid and get a structured agent summary — type, fee, flags, confirmation status. Saves 500-2,000 LLM tokens.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">optimal_send_window</span><span class="tool-price">25 sats</span></div><div class="tool-desc">Congestion forecast + recommended send window with a calibrated confidence score and RBF viability. A timing decision no free endpoint provides.</div></div></div><div class="try"><h3>Try it free — no wallet required.</h3><p>Fetch the live Bitcoin price. This read-only call is free on this page; in production, an agent pays 10 sats or a fraction of a fiat credit.</p><button class="try-btn" id="tryBtn" onclick="fetchPrice()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Get BTC price</button><div id="result"></div></div></section>
-<section><h2>How agents pay</h2><p style="color:var(--muted);font-size:15px;max-width:60ch">An agent calls a tool with no auth. The server returns <code>402 Payment Required</code> with a Lightning invoice (L402) or points to a fiat credit key. The agent pays, then retries with the proof of payment — and gets the result.</p><div class="code-block"><span class="k"># 1. Call a tool → get a 402 + Lightning invoice</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span>\n\n<span class="k"># 2. Pay the BOLT11 invoice, then retry with the L402 token + preimage</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -H <span class="s">"Authorization: L402 &lt;token&gt;:&lt;preimage&gt;"</span> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span>\n\n<span class="k"># Fiat path: buy a credit key, then use it as a Bearer token</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Authorization: Bearer loop_&lt;credit_key&gt;"</span> \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span></div><p style="color:var(--dim);font-size:13px;margin-top:14px">Buy fiat credits at <a href="https://api.loopxxi.com/ai-credits">api.loopxxi.com/ai-credits</a>. Full docs in the <a href="https://github.com/Loop-XXI/loop-mcp">GitHub repo</a>.</p></section></div>
+<section><h2>How agents pay</h2><p style="color:var(--muted);font-size:15px;max-width:60ch">An agent calls a tool with no auth. The server returns <code>402 Payment Required</code> with a Lightning invoice (L402) or points to a fiat credit key. The agent pays, then retries with the proof of payment — and gets the result.</p><div class="code-block"><span class="k"># 1. Call a tool → get a 402 + Lightning invoice</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span>\n\n<span class="k"># 2. Pay the BOLT11 invoice, then retry with the L402 token + preimage</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -H <span class="s">"Authorization: L402 &lt;to...pan> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span>\n\n<span class="k"># Fiat path: buy a credit key, then use it as a Bearer token</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Authorization: Bearer loop_&...pan> \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span></div><p style="color:var(--dim);font-size:13px;margin-top:14px">Buy fiat credits at <a href="https://api.loopxxi.com/ai-credits">api.loopxxi.com/ai-credits</a>. Full docs in the <a href="https://github.com/Loop-XXI/loop-mcp">GitHub repo</a>.</p></section></div>
 <footer><div class="wrap"><p>© <span id="y"></span> Loop XXI LLC</p><p><a href="mailto:business@loopxxi.com">business@loopxxi.com</a> · <a href="https://github.com/Loop-XXI/loop-mcp">GitHub</a> · <a href="https://loopxxi.com">LoopXXI</a></p></div></footer>
 <script>document.getElementById('y').textContent=new Date().getFullYear();async function fetchPrice(){const btn=document.getElementById('tryBtn');const res=document.getElementById('result');btn.disabled=true;btn.textContent='Fetching...';res.className='show';res.textContent='Calling btc_price via the free MCP endpoint...';try{const r=await fetch('/try/btc_price',{method:'POST'});const j=await r.json();res.textContent=JSON.stringify(j,null,2)}catch(e){res.textContent='Error: '+e.message}btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Get BTC price'}</script>
 </body>
@@ -651,9 +749,11 @@ func main() {
 	// MCP server card — Smithery / catalog scanner metadata.
 	// Served at both route prefixes so mcp.loopxxi.com and the Railway domain
 	// both satisfy scanners without path rewriting.
-	r.GET("/.well-known/mcp/server-card.json", func(c *gin.Context) {
-		serveServerCard(c)
-	})
+	r.GET("/.well-known/mcp/server-card.json", serveServerCard)
+
+	// Agent payment manifest — machine-readable for buyer agents.
+	r.GET("/.well-known/agent-payments.json", serveAgentPaymentManifest)
+	r.GET("/agent-payments.json", serveAgentPaymentManifest)
 
 	// Satring domain verification challenge — no auth.
 	// Generated 2026-06-30 for the loop-mcp listing.
@@ -674,12 +774,12 @@ func main() {
 			})
 		}
 		c.JSON(http.StatusOK, gin.H{
-			"server":       "loop-mcp",
-			"version":      "2.2.0",
-			"protocol":     "MCP 2024-11-05",
+			"server":  "loop-mcp",
+			"version": "2.2.0",
+			"protocol": "MCP 2024-11-05",
 			"payment_rails": []gin.H{
-				{"name": "L402 (Lightning)", "instructions": "Authorization: L402 <token>:<preimage>"},
-				{"name": "Fiat credit_key (Stripe)", "instructions": "Authorization: Bearer loop_<credit_key>. Buy credits at https://api.loopxxi.com/ai-credits"},
+				{"name": "L402 (Lightning)", "instructions": "Authorization: L402 <token...>"},
+				{"name": "Fiat credit_key (Stripe)", "instructions": "Authorization: Bearer loop_<...ey>. Buy credits at https://api.loopxxi.com/ai-credits"},
 			},
 			"tools":   toolList,
 			"docs":    "https://github.com/Loop-XXI/loop-mcp",
