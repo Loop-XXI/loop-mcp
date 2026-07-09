@@ -80,6 +80,7 @@ func serveServerCard(c *gin.Context) {
 			"name":        t.Name,
 			"description": t.Description,
 			"inputSchema": t.InputSchema,
+			"annotations": t.Annotations,
 			"price": gin.H{
 				"currency": "sats",
 				"amount":   t.SatsPrice,
@@ -413,6 +414,7 @@ func handleMCP(c *gin.Context) {
 				"name":        t.Name,
 				"description": t.Description,
 				"inputSchema": t.InputSchema,
+				"annotations": t.Annotations,
 			})
 		}
 		c.JSON(http.StatusOK, mcpOK(req.ID, gin.H{"tools": toolList}))
@@ -667,6 +669,7 @@ func main() {
 				"name":        t.Name,
 				"description": t.Description,
 				"inputSchema": t.InputSchema,
+				"annotations": t.Annotations,
 				"price_sats":  t.SatsPrice,
 			})
 		}

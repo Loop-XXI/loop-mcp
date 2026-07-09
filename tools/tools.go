@@ -20,7 +20,18 @@ type Tool struct {
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
 	InputSchema json.RawMessage `json:"inputSchema"`
+	Annotations json.RawMessage `json:"annotations,omitempty"`
 	SatsPrice   int64           `json:"-"`
+}
+
+func readOnlyAnnotations(title string) json.RawMessage {
+	b, _ := json.Marshal(map[string]interface{}{
+		"title":           title,
+		"readOnlyHint":    true,
+		"destructiveHint": false,
+		"openWorldHint":   true,
+	})
+	return json.RawMessage(b)
 }
 
 // All returns the complete list of registered tools.
@@ -72,6 +83,7 @@ func btcPriceTool() Tool {
 		Name:        "btc_price",
 		Description: "Get the current Bitcoin price in USD and major fiat currencies. Source: mempool.space. Real-time.",
 		InputSchema: json.RawMessage(`{"type":"object","properties":{},"required":[]}`),
+		Annotations: readOnlyAnnotations("Bitcoin Price"),
 		SatsPrice:   10,
 	}
 }
@@ -107,6 +119,7 @@ func btcSendDecisionTool() Tool {
 			},
 			"required": []
 		}`),
+		Annotations: readOnlyAnnotations("Bitcoin Send Decision"),
 		SatsPrice: 15,
 	}
 }
@@ -235,6 +248,7 @@ func lightningAddressResolveTool() Tool {
 			},
 			"required": ["address", "amount_sats"]
 		}`),
+		Annotations: readOnlyAnnotations("Lightning Address Resolve"),
 		SatsPrice: 10,
 	}
 }
@@ -338,6 +352,7 @@ func txDecodeExplainTool() Tool {
 			},
 			"required": ["txid"]
 		}`),
+		Annotations: readOnlyAnnotations("Transaction Decode and Explain"),
 		SatsPrice: 25,
 	}
 }
@@ -547,6 +562,7 @@ func optimalSendWindowTool() Tool {
 			},
 			"required": []
 		}`),
+		Annotations: readOnlyAnnotations("Optimal Send Window"),
 		SatsPrice: 25,
 	}
 }
