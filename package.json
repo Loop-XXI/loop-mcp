@@ -1,6 +1,6 @@
 {
   "name": "@loop-xxi/loop-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Dual-rail (x402/USDC + Lightning/L402) payment transport for the Model Context Protocol. Charge agents per tool call over either rail, settled into one canonical rail-tagged ledger.",
   "license": "MIT",
   "author": "Loop XXI LLC",
@@ -31,7 +31,11 @@
   "files": [
     "dist/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "example/README.md",
+    "example/client.py",
+    "example/client.ts",
+    "example/fiat-credit-client.ts"
   ],
   "scripts": {
     "dev": "tsx watch example/server.ts",
