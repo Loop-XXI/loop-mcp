@@ -40,6 +40,14 @@ A request with no auth returns `HTTP 402` with a Lightning invoice (L402) and, i
 
 `POST https://mcp.loopxxi.com/try/btc_price` returns the live Bitcoin price for free — a read-only lead-gen endpoint so you can see a tool's output before wiring up payment.
 
+### L402 discovery manifest
+
+Generic L402 buyer agents and compatible registries can discover the REST-shaped paid endpoints here:
+
+- [`https://mcp.loopxxi.com/.well-known/l402-manifest.json`](https://mcp.loopxxi.com/.well-known/l402-manifest.json)
+
+The manifest currently advertises `btc_price` (10 sats), `btc_send_decision` (15 sats), and `optimal_send_window` (25 sats). Each endpoint returns a standard HTTP 402 challenge with a BOLT11 invoice and accepts `Authorization: L402 <token>:<preimage>` on retry.
+
 ### Agent payment preflight
 
 Any buyer agent should fetch the machine-readable payment manifest before paying:
