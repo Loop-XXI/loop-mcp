@@ -215,6 +215,65 @@ func serveAgentPaymentManifest(c *gin.Context) {
 	})
 }
 
+// serveL402Manifest serves the Lightning Enable-compatible discovery manifest.
+// It advertises the REST-shaped paid endpoints that a generic L402 buyer can
+// call without constructing an MCP JSON-RPC body.
+func serveL402Manifest(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"$schema": "https://docs.lightningenable.com/schemas/l402-manifest-v1.json",
+		"version": "1.0",
+		"service": gin.H{
+			"name": "loop-mcp Bitcoin Agent Tools",
+			"description": "Read-only Bitcoin and Lightning decision tools for autonomous agents, paid per call over L402.",
+			"base_url": "https://mcp.loopxxi.com",
+			"logo_url": nil,
+			"contact_email": "business@loopxxi.com",
+			"documentation_url": "https://github.com/Loop-XXI/loop-mcp",
+			"terms_of_service_url": "https://loopxxi.com/terms",
+			"categories": []string{"bitcoin", "finance", "agent-tools", "data"},
+		},
+		"l402": gin.H{
+			"default_price_sats": 10,
+			"payment_flow": "402_challenge_response",
+			"auth_header_format": "Authorization: L402 <macaroon>:<preimage>",
+			"capabilities": gin.H{
+				"preimage_in_response": true,
+				"supported_currencies": []string{"BTC"},
+			},
+		},
+		"endpoints": []gin.H{
+			{
+				"id": "get-btc-price",
+				"path": "/l402/btc_price",
+				"method": "GET",
+				"summary": "Current Bitcoin price",
+				"description": "Current Bitcoin price in USD and major fiat currencies, returned as structured JSON.",
+				"pricing": gin.H{"model": "perrequest", "base_price_sats": 10},
+				"l402_enabled": true,
+			},
+			{
+				"id": "get-btc-send-decision",
+				"path": "/l402/btc_send_decision",
+				"method": "GET",
+				"summary": "Bitcoin send-or-wait decision",
+				"description": "Live SEND_NOW, WAIT, or URGENT_ONLY recommendation using mempool pressure and fee savings.",
+				"pricing": gin.H{"model": "perrequest", "base_price_sats": 15},
+				"l402_enabled": true,
+			},
+			{
+				"id": "get-optimal-send-window",
+				"path": "/l402/optimal_send_window",
+				"method": "GET",
+				"summary": "Optimal Bitcoin send window",
+				"description": "Congestion forecast and recommended UTC send window with confidence and RBF viability.",
+				"pricing": gin.H{"model": "perrequest", "base_price_sats": 25},
+				"l402_enabled": true,
+			},
+		},
+		"generated_at": time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // L402 macaroon helpers
 // ────────────────────────────────────────────────────────────────────────────
@@ -631,7 +690,7 @@ const landingHTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>loop-mcp — Paid MCP tools for AI agents</title>
-<meta name="description" content="An L402-native MCP server where AI agents pay per tool call in sats over Lightning or fiat credits via Stripe. Four live Bitcoin and Lightning tools.">
+<meta name="description" content="An L402-native MCP server where AI agents pay per tool call in sats over Lightning or fiat credits via Stripe. Five live Bitcoin and Lightning tools.">
 <meta property="og:title" content="loop-mcp">
 <meta property="og:description" content="Paid MCP tools for autonomous AI agents. Pay per call in sats or fiat credits.">
 <meta property="og:type" content="website">
@@ -755,6 +814,10 @@ func main() {
 	r.GET("/.well-known/agent-payments.json", serveAgentPaymentManifest)
 	r.GET("/agent-payments.json", serveAgentPaymentManifest)
 
+	// Lightning Enable-compatible L402 discovery manifest.
+	r.GET("/.well-known/l402-manifest.json", serveL402Manifest)
+	r.GET("/l402-manifest.json", serveL402Manifest)
+
 	// Satring domain verification challenge — no auth.
 	// Generated 2026-06-30 for the loop-mcp listing.
 	r.GET("/.well-known/satring-verify", func(c *gin.Context) {
@@ -793,6 +856,8 @@ func main() {
 	// GET /l402/btc_price — REST-shaped L402 endpoint for directories and
 	// simple agents that probe URLs without a JSON-RPC body.
 	r.GET("/l402/btc_price", handleRESTL402Tool(cfg, "btc_price"))
+	r.GET("/l402/btc_send_decision", handleRESTL402Tool(cfg, "btc_send_decision"))
+	r.GET("/l402/optimal_send_window", handleRESTL402Tool(cfg, "optimal_send_window"))
 
 	// GET / — branded public landing page (lead-gen for humans visiting mcp.loopxxi.com)
 	r.GET("/", func(c *gin.Context) {
