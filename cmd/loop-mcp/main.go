@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -285,12 +286,18 @@ func issueToken(secret, paymentHash, toolName string, ts int64) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(msg))
 	sig := hex.EncodeToString(mac.Sum(nil))
-	return fmt.Sprintf("%s:%s:%d:%s", paymentHash, toolName, ts, sig)
+	raw := fmt.Sprintf("%s:%s:%d:%s", paymentHash, toolName, ts, sig)
+	return base64.RawURLEncoding.EncodeToString([]byte(raw))
 }
 
 // verifyToken validates the token and returns (paymentHash, toolName, ok).
 // Tokens expire after 24 hours.
 func verifyToken(secret, token string) (paymentHash, toolName string, ok bool) {
+	// New challenges use base64url so indexers and legacy L402 parsers accept
+	// the opaque token. Continue accepting pre-migration colon-delimited tokens.
+	if decoded, err := base64.RawURLEncoding.DecodeString(token); err == nil {
+		token = string(decoded)
+	}
 	parts := strings.Split(token, ":")
 	if len(parts) != 4 {
 		return "", "", false
@@ -666,7 +673,7 @@ func handleRESTL402Tool(cfg Config, toolName string) gin.HandlerFunc {
 		}
 
 		token := issueToken(cfg.MacaroonSecret, paymentHash, toolName, time.Now().Unix())
-		c.Header("WWW-Authenticate", fmt.Sprintf("L402 macaroon=\"%s\", invoice=\"%s\"", token, bolt11))
+		c.Header("WWW-Authenticate", fmt.Sprintf("L402 version=\"0\", token=\"%s\", macaroon=\"%s\", invoice=\"%s\"", token, token, bolt11))
 		c.JSON(http.StatusPaymentRequired, gin.H{
 			"error":           "payment_required",
 			"message":         fmt.Sprintf("Payment required: %d sats for %s", tool.SatsPrice, toolName),
