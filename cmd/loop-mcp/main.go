@@ -824,6 +824,12 @@ func main() {
 		c.String(http.StatusOK, "bf6000d67cc6050662d50b51265736729b00eb0f6a8853d2a8f1e6d1ff7d109e")
 	})
 
+	// 402 Index domain verification challenge — public hash only.
+	r.GET("/.well-known/402index-verify.txt", func(c *gin.Context) {
+		c.Header("Content-Type", "text/plain; charset=utf-8")
+		c.String(http.StatusOK, "e1de7a05e40bc63e8101b6b7e829098070f70421d4a5f90cb5d67c9d7b741234\n")
+	})
+
 	// GET /mcp — free tool discovery for agents
 	r.GET("/mcp", func(c *gin.Context) {
 		var toolList []gin.H
