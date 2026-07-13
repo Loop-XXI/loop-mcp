@@ -71,7 +71,7 @@ The script never pays — it only reads the manifest and makes a go/no-go decisi
 
 The agent flow is three HTTP calls: **challenge → pay → retry**. On the first `tools/call` with no payment, the server returns `HTTP 402` with a BOLT11 invoice and an L402 token. Pay the invoice over Lightning, then retry the same request with `Authorization: L402 <token>:<preimage>`. The server verifies the preimage statelessly and serves the result. No database, no session.
 
-> **Parsing note:** the L402 token is colon-delimited (`<paymentHash>:<tool>:<ts>:<hmac>`). The final header is `L402 <token>:<preimage>` — split on the **last** colon, since the preimage is a colon-free 64-char hex string.
+> **Parsing note:** new challenges expose an opaque base64url token in the `WWW-Authenticate` `token` and legacy `macaroon` fields. Retry with `Authorization: L402 <token>:<preimage>` and split on the **last** colon, since the preimage is a colon-free 64-character hex string. The server also accepts pre-migration colon-delimited tokens during the compatibility window.
 
 #### curl
 
