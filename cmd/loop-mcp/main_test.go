@@ -41,3 +41,21 @@ func TestTokenBindsToolAndExpires(t *testing.T) {
 		t.Fatal("wrong secret was accepted")
 	}
 }
+
+func TestConsumePaymentPreimageRejectsReplay(t *testing.T) {
+	preimage := strings.Repeat("03", 32)
+	preimageBytes, err := hex.DecodeString(preimage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hash := sha256.Sum256(preimageBytes)
+	paymentHash := hex.EncodeToString(hash[:])
+	consumedPaymentHashes.Delete(paymentHash)
+
+	if !consumePaymentPreimage(paymentHash, preimage) {
+		t.Fatal("first valid payment proof was rejected")
+	}
+	if consumePaymentPreimage(paymentHash, preimage) {
+		t.Fatal("replayed payment proof was accepted")
+	}
+}

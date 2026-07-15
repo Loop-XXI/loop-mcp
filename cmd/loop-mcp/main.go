@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -93,8 +94,8 @@ func serveServerCard(c *gin.Context) {
 		"schema_version": "1.0",
 		"id":             "loop-mcp",
 		"name":           "loop-mcp",
-		"version":        "2.2.0",
-		"description":    "L402-native MCP server where AI agents pay per Bitcoin/Lightning tool call in sats or fiat credits.",
+		"version":        "2.3.0",
+		"description":    "Pay-per-call MCP server with 15 Bitcoin, data, text, and developer utilities over Lightning or prepaid credits.",
 		"license":        "MIT",
 		"provider": gin.H{
 			"name":    "Loop XXI LLC",
@@ -147,8 +148,8 @@ func serveAgentPaymentManifest(c *gin.Context) {
 		"service": gin.H{
 			"id":          "loop-mcp",
 			"name":        "loop-mcp",
-			"version":     "2.2.0",
-			"description": "L402-native MCP server where AI agents pay per Bitcoin/Lightning tool call in sats or fiat credits.",
+			"version":     "2.3.0",
+			"description": "Pay-per-call MCP server with 15 Bitcoin, data, text, and developer utilities over Lightning or prepaid credits.",
 		},
 		"endpoints": []gin.H{
 			{
@@ -225,7 +226,7 @@ func serveL402Manifest(c *gin.Context) {
 		"version": "1.0",
 		"service": gin.H{
 			"name": "loop-mcp Bitcoin Agent Tools",
-			"description": "Read-only Bitcoin and Lightning decision tools for autonomous agents, paid per call over L402.",
+			"description": "Focused Bitcoin intelligence and developer utilities for autonomous agents, paid per call over L402.",
 			"base_url": "https://mcp.loopxxi.com",
 			"logo_url": nil,
 			"contact_email": "business@loopxxi.com",
@@ -291,7 +292,7 @@ func issueToken(secret, paymentHash, toolName string, ts int64) string {
 }
 
 // verifyToken validates the token and returns (paymentHash, toolName, ok).
-// Tokens expire after 24 hours.
+// Tokens expire with the one-hour Lightning invoice.
 func verifyToken(secret, token string) (paymentHash, toolName string, ok bool) {
 	return verifyTokenAt(secret, token, time.Now().Unix())
 }
@@ -312,7 +313,7 @@ func verifyTokenAt(secret, token string, nowUnix int64) (paymentHash, toolName s
 		return "", "", false
 	}
 	age := nowUnix - ts
-	if age < 0 || age > 86400 {
+	if age < 0 || age > 3600 {
 		return "", "", false
 	}
 	msg := fmt.Sprintf("%s:%s:%d", ph, tn, ts)
@@ -333,6 +334,19 @@ func verifyPaymentPreimage(paymentHash, preimage string) bool {
 	hashBytes := sha256.Sum256(preimageBytes)
 	computedHash := hex.EncodeToString(hashBytes[:])
 	return hmac.Equal([]byte(strings.ToLower(paymentHash)), []byte(computedHash))
+}
+
+// consumedPaymentHashes makes each L402 proof single-use within the running
+// service. This prevents one paid invoice from being replayed for repeated
+// tool execution. Railway runs a single service instance for this deployment.
+var consumedPaymentHashes sync.Map
+
+func consumePaymentPreimage(paymentHash, preimage string) bool {
+	if !verifyPaymentPreimage(paymentHash, preimage) {
+		return false
+	}
+	_, alreadyConsumed := consumedPaymentHashes.LoadOrStore(strings.ToLower(paymentHash), struct{}{})
+	return !alreadyConsumed
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -511,14 +525,14 @@ func l402Middleware(cfg Config) gin.HandlerFunc {
 			return
 		}
 
-		// Verify L402 token
+		// Verify and atomically consume the L402 token.
 		if strings.HasPrefix(authHeader, "L402 ") {
 			cred := authHeader[5:]
 			lastColon := strings.LastIndex(cred, ":")
 			if lastColon > 0 {
 				token, preimage := cred[:lastColon], cred[lastColon+1:]
 				ph, tn, ok := verifyToken(cfg.MacaroonSecret, token)
-				if ok && tn == toolName && verifyPaymentPreimage(ph, preimage) {
+				if ok && tn == toolName && consumePaymentPreimage(ph, preimage) {
 					c.Set("toolName", toolName)
 					c.Set("toolArgs", callParams.Arguments)
 					c.Next()
@@ -574,7 +588,7 @@ func handleMCP(c *gin.Context) {
 			"protocolVersion": "2024-11-05",
 			"serverInfo": gin.H{
 				"name":    "loop-mcp",
-				"version": "2.0.0",
+				"version": "2.3.0",
 			},
 			"capabilities": gin.H{
 				"tools": gin.H{},
@@ -677,7 +691,7 @@ func handleRESTL402Tool(cfg Config, toolName string) gin.HandlerFunc {
 			if lastColon > 0 {
 				token, preimage := cred[:lastColon], cred[lastColon+1:]
 				ph, tn, ok := verifyToken(cfg.MacaroonSecret, token)
-				if ok && tn == toolName && verifyPaymentPreimage(ph, preimage) {
+				if ok && tn == toolName && consumePaymentPreimage(ph, preimage) {
 					result, err := dispatchTool(toolName, json.RawMessage("{}"))
 					if err != nil {
 						c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
@@ -721,10 +735,10 @@ const landingHTML = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>loop-mcp — Paid MCP tools for AI agents</title>
-<meta name="description" content="An L402-native MCP server where AI agents pay per tool call in sats over Lightning or fiat credits via Stripe. Five live Bitcoin and Lightning tools.">
-<meta property="og:title" content="loop-mcp">
-<meta property="og:description" content="Paid MCP tools for autonomous AI agents. Pay per call in sats or fiat credits.">
+<title>loop-mcp | 15 pay-per-call tools for AI agents</title>
+<meta name="description" content="One MCP endpoint for 15 focused Bitcoin, data, text, and developer utilities. Pay per call with Lightning or prepaid fiat credits.">
+<meta property="og:title" content="loop-mcp by LoopXXI">
+<meta property="og:description" content="15 focused tools. One endpoint. Pay only for what your agent uses.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://mcp.loopxxi.com">
 <meta name="theme-color" content="#0a0a0a">
@@ -732,65 +746,50 @@ const landingHTML = `<!doctype html>
 <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 <link rel="icon" type="image/png" href="https://loopxxi.com/LoopXXI-Logo.png">
 <style>
-  :root { --bg:#0a0a0a; --ink:#e8e6df; --muted:#8a877e; --dim:#595550; --line:#1f1e1b; --surface:#141412; --green:#22c55e; --btc:#f7931a; --ln:#a78bfa; }
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--ink);font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;font-feature-settings:"ss01","cv11";font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-  ::selection{background:var(--ink);color:var(--bg)}
-  a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--dim);transition:border-color .2s}
-  a:hover{border-color:var(--ink)}
-  .wrap{max-width:880px;margin:0 auto;padding:0 32px}
-  header{padding:28px 0;border-bottom:1px solid var(--line)}
-  header .wrap{display:flex;justify-content:space-between;align-items:center}
-  .brand{font-weight:600;font-size:17px;letter-spacing:-0.02em;border:none}
-  .brand span{color:var(--muted);font-weight:400}
-  .nav-links{display:flex;gap:24px;list-style:none}
-  .nav-links a{font-size:14px;color:var(--muted);border:none}
-  .nav-links a:hover{color:var(--ink)}
-  .hero{padding:80px 0 56px}
-  .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border:1px solid rgba(34,197,94,.3);border-radius:100px;font-size:12px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;color:var(--green);background:rgba(34,197,94,.06);margin-bottom:28px}
-  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite}
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
-  h1{font-weight:500;font-size:clamp(36px,5vw,52px);line-height:1.08;letter-spacing:-0.03em;text-wrap:balance}
-  .hero p{margin-top:24px;font-size:18px;color:var(--muted);max-width:56ch;text-wrap:pretty}
-  .rails{display:flex;gap:12px;margin-top:32px;flex-wrap:wrap}
-  .rail{padding:10px 16px;border:1px solid var(--line);border-radius:10px;font-size:13px;color:var(--muted);background:var(--surface)}
-  .rail strong{color:var(--ink);font-weight:500}
-  section{padding:48px 0;border-top:1px solid var(--line)}
-  h2{font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:28px}
-  .tools{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .tool{padding:24px;border:1px solid var(--line);border-radius:12px;background:var(--surface);transition:border-color .25s}
-  .tool:hover{border-color:var(--dim)}
-  .tool-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
-  .tool-name{font-weight:500;font-size:16px;letter-spacing:-0.01em}
-  .tool-price{font-size:12px;font-weight:600;color:var(--green);letter-spacing:0.04em}
-  .tool-desc{font-size:14px;color:var(--muted);line-height:1.6}
-  .try{margin-top:36px;padding:28px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
-  .try h3{font-weight:500;font-size:17px;margin-bottom:8px;letter-spacing:-0.01em}
-  .try p{font-size:14px;color:var(--muted);margin-bottom:16px}
-  .try-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:100px;background:var(--ink);color:var(--bg);font-size:14px;font-weight:600;border:none;cursor:pointer;transition:opacity .2s}
-  .try-btn:hover{opacity:.9}
-  .try-btn:disabled{opacity:.5;cursor:wait}
-  #result{margin-top:20px;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--ink);white-space:pre-wrap;word-break:break-all;display:none}
-  #result.show{display:block}
-  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--surface);padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
-  .code-block{margin-top:16px;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted);overflow-x:auto;white-space:pre;line-height:1.6}
-  .code-block .k{color:var(--ln)}
-  .code-block .s{color:var(--green)}
-  footer{padding:40px 0;border-top:1px solid var(--line)}
-  footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
-  footer p{font-size:13px;color:var(--muted)}
-  footer a{color:var(--muted);border:none}
-  footer a:hover{color:var(--ink)}
-  @media (max-width:640px){.tools{grid-template-columns:1fr}.wrap{padding:0 20px}.hero{padding:48px 0 32px}}
+:root{--bg:#0a0a0a;--ink:#f5f5f4;--muted:#96938b;--dim:#65615b;--line:#292824;--surface:#141412;--green:#42d881}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;font-feature-settings:"ss01","cv11";font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+::selection{background:var(--ink);color:var(--bg)}
+a{color:inherit;text-decoration:none}.wrap{max-width:1120px;margin:0 auto;padding:0 32px}
+header{border-bottom:1px solid var(--line)}header .wrap{height:72px;display:flex;align-items:center;justify-content:space-between}.brand{font-size:17px;font-weight:650;letter-spacing:-.03em}.brand span{color:var(--muted);font-weight:430}.nav{display:flex;align-items:center;gap:24px}.nav a{font-size:14px;color:var(--muted)}.nav a:hover{color:var(--ink)}
+.hero{padding:96px 0 72px}.status{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid #245638;border-radius:999px;color:var(--green);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}.dot{width:6px;height:6px;border-radius:50%;background:var(--green)}h1{font-size:clamp(44px,7vw,78px);line-height:1.01;letter-spacing:-.055em;font-weight:520;max-width:900px;margin-top:28px}.lede{font-size:20px;color:var(--muted);max-width:680px;margin-top:28px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 20px;border-radius:8px;border:1px solid var(--line);font-size:14px;font-weight:600}.button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}.button:hover{opacity:.86}.stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:72px}.stat{padding:24px 20px;border-right:1px solid var(--line)}.stat:last-child{border-right:0}.stat strong{display:block;font-size:24px;letter-spacing:-.03em}.stat span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+section{padding:72px 0;border-bottom:1px solid var(--line)}.section-head{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:28px}.eyebrow{font-size:11px;font-weight:650;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}h2{font-size:clamp(28px,4vw,42px);font-weight:520;letter-spacing:-.04em;line-height:1.1;margin-top:10px}.section-copy{color:var(--muted);max-width:520px;font-size:15px}
+.category{margin-top:40px}.category:first-of-type{margin-top:0}.category-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.category-title h3{font-size:14px;font-weight:620}.category-title span{font-size:12px;color:var(--dim)}.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.tool{min-height:168px;padding:22px;border:1px solid var(--line);border-radius:10px;background:var(--surface);display:flex;flex-direction:column}.tool:hover{border-color:#45423d}.tool-top{display:flex;justify-content:space-between;gap:12px;align-items:start}.tool-name{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:650;word-break:break-word}.price{font-size:11px;color:var(--green);font-weight:650;white-space:nowrap}.tool p{font-size:13px;color:var(--muted);line-height:1.55;margin-top:14px}.tool .input{font-size:11px;color:var(--dim);margin-top:auto;padding-top:18px}
+.buy-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.buy-card{border:1px solid var(--line);border-radius:12px;padding:28px;background:var(--surface)}.buy-card h3{font-size:20px;letter-spacing:-.025em}.buy-card p{font-size:14px;color:var(--muted);margin:10px 0 24px}.buy-card code{font-size:12px;color:var(--ink);word-break:break-all}.manifest{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:#0d0d0c;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted);overflow:auto}.try{margin-top:16px;padding:24px;border:1px solid var(--line);border-radius:12px}.try h3{font-size:17px}.try p{font-size:13px;color:var(--muted);margin:6px 0 16px}.try-btn{padding:10px 18px;border:0;border-radius:8px;background:var(--ink);color:var(--bg);font-weight:650;cursor:pointer}.try-btn:disabled{opacity:.5}#result{display:none;margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre-wrap;word-break:break-all}#result.show{display:block}
+footer{padding:40px 0}.footer-row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:13px;color:var(--muted)}.footer-links{display:flex;gap:18px}
+@media(max-width:860px){.tools{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-right:0}.stat:nth-child(-n+2){border-bottom:1px solid var(--line)}.buy-grid{grid-template-columns:1fr}.section-head{display:block}.section-copy{margin-top:16px}}
+@media(max-width:580px){.wrap{padding:0 20px}.nav a:first-child{display:none}.hero{padding:64px 0 48px}h1{font-size:46px}.lede{font-size:17px}.tools{grid-template-columns:1fr}.stats{margin-top:48px}.stat{padding:18px 12px}.section-head{margin-bottom:24px}section{padding:52px 0}}
 </style>
 </head>
 <body>
-<header><div class="wrap"><a href="https://loopxxi.com" class="brand">loop-mcp <span>by LoopXXI</span></a><ul class="nav-links"><li><a href="https://github.com/Loop-XXI/loop-mcp">GitHub</a></li><li><a href="https://loopxxi.com">LoopXXI</a></li></ul></div></header>
-<div class="wrap"><div class="hero"><div class="pill"><span class="dot"></span>Live · v2.2.0</div><h1>Paid tools for autonomous AI agents.</h1><p>An L402-native MCP server where agents pay per tool call — 10 to 25 sats over Lightning, or fiat-funded credits via Stripe. Payment is the credential: no API keys, no accounts. The first MCP server on the official Registry that charges agents directly.</p><div class="rails"><div class="rail"><strong>Lightning (L402)</strong> — 10-25 sats/call</div><div class="rail"><strong>Stripe credits</strong> — <a href="https://api.loopxxi.com/ai-credits">buy a key</a></div></div></div>
-<section><h2>Live tools</h2><div class="tools"><div class="tool"><div class="tool-head"><span class="tool-name">btc_price</span><span class="tool-price">10 sats</span></div><div class="tool-desc">Current Bitcoin price in USD and major fiat currencies. Source: mempool.space.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">btc_send_decision</span><span class="tool-price">15 sats</span></div><div class="tool-desc">Send-or-wait verdict with fee rates, mempool pressure, and estimated savings. One call replaces parsing multiple mempool endpoints.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">lightning_address_resolve</span><span class="tool-price">10 sats</span></div><div class="tool-desc">Resolve a Lightning Address to a payable BOLT11 invoice. Full LNURL-pay protocol in one call.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">tx_decode_explain</span><span class="tool-price">25 sats</span></div><div class="tool-desc">Fetch a Bitcoin transaction by txid and get a structured agent summary — type, fee, flags, confirmation status. Saves 500-2,000 LLM tokens.</div></div><div class="tool"><div class="tool-head"><span class="tool-name">optimal_send_window</span><span class="tool-price">25 sats</span></div><div class="tool-desc">Congestion forecast + recommended send window with a calibrated confidence score and RBF viability. A timing decision no free endpoint provides.</div></div></div><div class="try"><h3>Try it free — no wallet required.</h3><p>Fetch the live Bitcoin price. This read-only call is free on this page; in production, an agent pays 10 sats or a fraction of a fiat credit.</p><button class="try-btn" id="tryBtn" onclick="fetchPrice()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Get BTC price</button><div id="result"></div></div></section>
-<section><h2>How agents pay</h2><p style="color:var(--muted);font-size:15px;max-width:60ch">An agent calls a tool with no auth. The server returns <code>402 Payment Required</code> with a Lightning invoice (L402) or points to a fiat credit key. The agent pays, then retries with the proof of payment — and gets the result.</p><div class="code-block"><span class="k"># 1. Call a tool → get a 402 + Lightning invoice</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span>\n\n<span class="k"># 2. Pay the BOLT11 invoice, then retry with the L402 token + preimage</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -H <span class="s">"Authorization: L402 &lt;to...pan> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span>\n\n<span class="k"># Fiat path: buy a credit key, then use it as a Bearer token</span>\ncurl -X POST https://mcp.loopxxi.com/mcp \\\n  -H <span class="s">"Authorization: Bearer loop_&...pan> \\\n  -H <span class="s">"Content-Type: application/json"</span> \\\n  -d <span class="s">'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"btc_price","arguments":{}}}'</span></div><p style="color:var(--dim);font-size:13px;margin-top:14px">Buy fiat credits at <a href="https://api.loopxxi.com/ai-credits">api.loopxxi.com/ai-credits</a>. Full docs in the <a href="https://github.com/Loop-XXI/loop-mcp">GitHub repo</a>.</p></section></div>
-<footer><div class="wrap"><p>© <span id="y"></span> Loop XXI LLC</p><p><a href="mailto:business@loopxxi.com">business@loopxxi.com</a> · <a href="https://github.com/Loop-XXI/loop-mcp">GitHub</a> · <a href="https://loopxxi.com">LoopXXI</a></p></div></footer>
-<script>document.getElementById('y').textContent=new Date().getFullYear();async function fetchPrice(){const btn=document.getElementById('tryBtn');const res=document.getElementById('result');btn.disabled=true;btn.textContent='Fetching...';res.className='show';res.textContent='Calling btc_price via the free MCP endpoint...';try{const r=await fetch('/try/btc_price',{method:'POST'});const j=await r.json();res.textContent=JSON.stringify(j,null,2)}catch(e){res.textContent='Error: '+e.message}btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Get BTC price'}</script>
+<header><div class="wrap"><a class="brand" href="https://loopxxi.com">Loop<span>XXI</span> / loop-mcp</a><nav class="nav"><a href="https://loopxxi.com/products">All products</a><a href="https://github.com/Loop-XXI/loop-mcp">Docs</a><a href="https://api.loopxxi.com/ai-credits">Buy credits</a></nav></div></header>
+<main>
+<div class="wrap"><div class="hero"><div class="status"><span class="dot"></span>15 tools live</div><h1>Small jobs should take one call.</h1><p class="lede">One MCP endpoint for focused Bitcoin, data, text, and developer utilities. Skip glue code, package hunting, and separate accounts. Pay only for the calls your agent uses.</p><div class="actions"><a class="button primary" href="https://api.loopxxi.com/ai-credits">Buy prepaid credits</a><a class="button" href="/.well-known/agent-payments.json">Inspect agent manifest</a></div><div class="stats"><div class="stat"><strong>15</strong><span>live tools</span></div><div class="stat"><strong>5-25</strong><span>sats per call</span></div><div class="stat"><strong>2</strong><span>payment rails</span></div><div class="stat"><strong>0</strong><span>subscriptions</span></div></div></div></div>
+<section><div class="wrap"><div class="section-head"><div><div class="eyebrow">Tool catalog</div><h2>Useful primitives, ready now.</h2></div><p class="section-copy">Every tool returns structured JSON. Discovery is free. Execution uses the same endpoint and the same prepaid key or Lightning payment.</p></div>
+<div class="category"><div class="category-title"><h3>Bitcoin and Lightning intelligence</h3><span>5 tools</span></div><div class="tools">
+<div class="tool"><div class="tool-top"><span class="tool-name">btc_price</span><span class="price">10 sats</span></div><p>Current Bitcoin price in USD and major fiat currencies.</p><div class="input">Input: optional currencies</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">btc_send_decision</span><span class="price">15 sats</span></div><p>Send now, wait, or urgent-only verdict using live fee and mempool conditions.</p><div class="input">Input: target, amount</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">lightning_address_resolve</span><span class="price">10 sats</span></div><p>Resolve a Lightning Address through the complete LNURL-pay flow.</p><div class="input">Input: address, amount</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">tx_decode_explain</span><span class="price">25 sats</span></div><p>Turn a transaction ID into a concise, structured explanation with fee and script flags.</p><div class="input">Input: txid</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">optimal_send_window</span><span class="price">25 sats</span></div><p>Estimate the most economical send window from live congestion and fee conditions.</p><div class="input">Input: target, horizon</div></div>
+</div></div>
+<div class="category"><div class="category-title"><h3>Data and developer utilities</h3><span>10 tools</span></div><div class="tools">
+<div class="tool"><div class="tool-top"><span class="tool-name">json_validate</span><span class="price">5 sats</span></div><p>Validate, normalize, classify, and hash JSON in one call.</p><div class="input">Input: JSON text</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">json_extract</span><span class="price">5 sats</span></div><p>Read a nested value using a simple path with array indexes.</p><div class="input">Input: JSON text, path</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">csv_to_json</span><span class="price">10 sats</span></div><p>Convert bounded CSV, TSV, semicolon, or pipe data to structured JSON.</p><div class="input">Input: delimited text</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">text_analyze</span><span class="price">5 sats</span></div><p>Count words, lines, sentences, estimated tokens, and reading time.</p><div class="input">Input: text</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">hash_generate</span><span class="price">5 sats</span></div><p>Create SHA-256 or SHA-512 digests in hex or Base64.</p><div class="input">Input: text, algorithm</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">base64_convert</span><span class="price">5 sats</span></div><p>Encode or decode standard and URL-safe Base64.</p><div class="input">Input: data, action</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">timestamp_convert</span><span class="price">5 sats</span></div><p>Normalize Unix, RFC3339, and date strings to UTC representations.</p><div class="input">Input: timestamp</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">uuid_generate</span><span class="price">5 sats</span></div><p>Generate up to 100 cryptographically random UUIDv4 values.</p><div class="input">Input: count</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">url_parse</span><span class="price">5 sats</span></div><p>Split an HTTP or HTTPS URL into safe structured components without fetching it.</p><div class="input">Input: URL</div></div>
+<div class="tool"><div class="tool-top"><span class="tool-name">jwt_decode</span><span class="price">5 sats</span></div><p>Decode JWT header and payload for inspection. Never presented as signature verification.</p><div class="input">Input: JWT</div></div>
+</div></div></div></section>
+<section><div class="wrap"><div class="section-head"><div><div class="eyebrow">Two ways to pay</div><h2>Use the rail you already have.</h2></div><p class="section-copy">No recurring plan. No per-tool account. The payment credential travels with the request.</p></div><div class="buy-grid"><div class="buy-card"><h3>Prepaid credits</h3><p>Buy a $10, $25, or $50 credit key with Stripe. Send the key as a Bearer token on every tool call.</p><a class="button primary" href="https://api.loopxxi.com/ai-credits">Buy credits</a><div class="manifest">Authorization: Bearer loop_&lt;credit_key&gt;</div></div><div class="buy-card"><h3>Lightning L402</h3><p>Call without authentication, pay the returned BOLT11 invoice, then retry with the token and preimage.</p><a class="button" href="/.well-known/l402-manifest.json">Open L402 manifest</a><div class="manifest">Authorization: L402 &lt;token&gt;:&lt;preimage&gt;</div></div></div><div class="try"><h3>Preview a real result for free</h3><p>The public preview calls btc_price with no wallet or credit key.</p><button class="try-btn" id="tryBtn" onclick="fetchPrice()">Get BTC price</button><div id="result"></div></div></div></section>
+<section><div class="wrap"><div class="section-head"><div><div class="eyebrow">Agent setup</div><h2>Discover first. Pay second.</h2></div><p class="section-copy">Fetch the machine-readable manifest to inspect names, schemas, exact prices, payment rails, and the maximum possible charge before execution.</p></div><div class="manifest">GET https://mcp.loopxxi.com/.well-known/agent-payments.json<br>GET https://mcp.loopxxi.com/mcp<br>POST https://mcp.loopxxi.com/mcp</div><div class="actions"><a class="button primary" href="https://github.com/Loop-XXI/loop-mcp">Read integration docs</a><a class="button" href="/mcp">List tools as JSON</a></div></div></section>
+</main>
+<footer><div class="wrap footer-row"><span>Loop XXI LLC</span><div class="footer-links"><a href="https://loopxxi.com/products">Products</a><a href="mailto:business@loopxxi.com">Contact</a><a href="https://github.com/Loop-XXI/loop-mcp">GitHub</a></div></div></footer>
+<script>async function fetchPrice(){var b=document.getElementById('tryBtn');var o=document.getElementById('result');b.disabled=true;b.textContent='Fetching';o.className='show';o.textContent='Calling btc_price';try{var r=await fetch('/try/btc_price',{method:'POST'});var j=await r.json();o.textContent=JSON.stringify(j,null,2)}catch(e){o.textContent='Error: '+e.message}b.disabled=false;b.textContent='Get BTC price'}</script>
 </body>
 </html>`
 
@@ -834,7 +833,7 @@ func main() {
 
 	// Health check — no auth
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "version": "2.2.0"})
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "version": "2.3.0"})
 	})
 
 	// MCP server card — Smithery / catalog scanner metadata.
@@ -876,7 +875,7 @@ func main() {
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"server":  "loop-mcp",
-			"version": "2.2.0",
+			"version": "2.3.0",
 			"protocol": "MCP 2024-11-05",
 			"payment_rails": []gin.H{
 				{"name": "L402 (Lightning)", "instructions": "Authorization: L402 <token...>"},
