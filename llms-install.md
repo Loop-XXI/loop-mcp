@@ -17,15 +17,16 @@ Open Cline → **MCP Servers** → **Configure MCP Servers** and add the followi
 }
 ```
 
-Save the file. Cline will connect to the remote server and list the five available tools:
+Save the file. Cline will connect to the remote server and list 15 tools:
 
-| Tool | Sats | What it returns |
-|---|---|---|
-| `btc_price` | 10 | Current BTC price (mempool.space) |
-| `btc_send_decision` | 15 | SEND_NOW / WAIT / URGENT_ONLY verdict + fee rates |
-| `lightning_address_resolve` | 10 | Resolve Lightning Address → BOLT11 invoice |
-| `tx_decode_explain` | 25 | Structured, agent-ready TX summary |
-| `optimal_send_window` | 25 | Timing intelligence + fee trajectory |
+| Group | Tools | Sats per call |
+|---|---|---:|
+| Bitcoin and Lightning | `btc_price`, `btc_send_decision`, `lightning_address_resolve`, `tx_decode_explain`, `optimal_send_window` | 10 to 25 |
+| JSON and tabular data | `json_validate`, `json_extract`, `csv_to_json` | 5 to 10 |
+| Text and encoding | `text_analyze`, `hash_generate`, `base64_convert` | 5 |
+| Developer primitives | `timestamp_convert`, `uuid_generate`, `url_parse`, `jwt_decode` | 5 |
+
+Fetch `https://mcp.loopxxi.com/.well-known/agent-payments.json` for complete input schemas and exact prices.
 
 ## 2. Try a free call (no payment needed)
 
@@ -41,7 +42,7 @@ This returns the current Bitcoin price with no wallet or credit key attached —
 Authorization: L402 <token>:<preimage>
 ```
 
-`<preimage>` is the payment preimage returned by your wallet after paying. The server verifies the preimage statelessly and serves the result. 10–25 sats per call.
+`<preimage>` is the payment preimage returned by your wallet after paying. The server verifies and consumes the preimage once, then serves the result. Calls cost 5 to 25 sats.
 
 **Option B: Prepaid fiat credit key.** If you'd rather pay by card once and forget it, buy a credit pack at [`api.loopxxi.com/ai-credits`](https://api.loopxxi.com/ai-credits) ($10 / $25 / $50 → sats at the live BTC price). You receive a key of the form `loop_...`. Configure Cline to send:
 

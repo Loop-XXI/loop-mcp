@@ -1,13 +1,13 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "com.loopxxi/loop-mcp",
-  "description": "L402 MCP: 5 paid BTC/Lightning tools + fiat credits, 10-25 sats/call.",
+  "description": "15 pay-per-call Bitcoin and developer tools over L402 or prepaid credits.",
   "title": "loop-mcp",
   "repository": {
     "url": "https://github.com/Loop-XXI/loop-mcp",
     "source": "github"
   },
-  "version": "2.2.0",
+  "version": "2.3.0",
   "websiteUrl": "https://loopxxi.com",
   "remotes": [
     {

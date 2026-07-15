@@ -13,32 +13,42 @@ It is API-compatible with the popular x402-only MCP transport, with one material
 > [![Reference clients](https://img.shields.io/badge/reference-Py%20%2B%20TS-blue)](https://github.com/Loop-XXI/loop-mcp/tree/main/example)
 
 
-## Live deployment (v2.2.0)
+## Live deployment (v2.3.0)
 
-A **live, hosted** deployment is running with **5 paid tools** on **two payment rails**: Lightning (L402) and fiat-funded credits via Stripe. No API keys, no signup — payment **is** the credential. A branded landing page and a free try endpoint are at `https://mcp.loopxxi.com/`.
+A **live, hosted** deployment exposes **15 paid tools** on **two payment rails**: Lightning (L402) and fiat-funded prepaid credits via Stripe. Discovery is free. Execution costs 5 to 25 sats per call. There is no subscription and no separate account per tool.
 
-**Endpoint:** `https://mcp.loopxxi.com/mcp` · **Health:** `https://mcp.loopxxi.com/health` · **Landing:** `https://mcp.loopxxi.com/`
+**Endpoint:** `https://mcp.loopxxi.com/mcp` · **Health:** `https://mcp.loopxxi.com/health` · **Catalog:** `https://mcp.loopxxi.com/`
 
 | Tool | Sats | What it returns |
-|---|---|---|
-| `btc_price` | 10 | Current Bitcoin price in USD + major fiat currencies (mempool.space). |
-| `btc_send_decision` | 15 | A SEND_NOW / WAIT / URGENT_ONLY verdict with fee rates (sat/vB), mempool pressure, and estimated savings — one decision call instead of parsing multiple mempool endpoints. |
-| `lightning_address_resolve` | 10 | Resolve a Lightning Address (`user@domain.com`) to a payable BOLT11 for a given amount — the full LNURL-pay flow in one call. |
-| `tx_decode_explain` | 25 | Decode a Bitcoin tx by txid into a structured agent summary: type, fee, fee rate, confirmation status, RBF/SegWit/Taproot flags, and a one-line `agent_summary` ready for LLM context. Saves 500–2,000 tokens vs raw JSON. |
-| `optimal_send_window` | 25 | Bitcoin transaction timing intelligence: recommended send window, fee trajectory, congestion forecast, confirmation targets, and RBF viability from live mempool data. |
+|---|---:|---|
+| `btc_price` | 10 | Current Bitcoin price in USD and major fiat currencies. |
+| `btc_send_decision` | 15 | A SEND_NOW, WAIT, or URGENT_ONLY verdict from live fee and mempool conditions. |
+| `lightning_address_resolve` | 10 | A Lightning Address resolved through the complete LNURL-pay flow. |
+| `tx_decode_explain` | 25 | A structured transaction explanation with fee, confirmation, and script flags. |
+| `optimal_send_window` | 25 | A recommended send window based on live congestion and fee conditions. |
+| `json_validate` | 5 | JSON validity, root type, normalized JSON, and SHA-256 hash. |
+| `json_extract` | 5 | A nested JSON value selected with a dot path and array indexes. |
+| `csv_to_json` | 10 | Bounded CSV, TSV, semicolon, or pipe data converted to JSON. |
+| `text_analyze` | 5 | Word, line, sentence, character, token, and reading-time estimates. |
+| `hash_generate` | 5 | SHA-256 or SHA-512 output in hex or Base64. |
+| `base64_convert` | 5 | Standard or URL-safe Base64 encoding and decoding. |
+| `timestamp_convert` | 5 | Unix, RFC3339, and date strings normalized to UTC. |
+| `uuid_generate` | 5 | Up to 100 cryptographically random UUIDv4 values. |
+| `url_parse` | 5 | HTTP or HTTPS URL components without a network request. |
+| `jwt_decode` | 5 | JWT header and payload for inspection, always marked unverified. |
 
 ### Two payment rails
 
 Agents pay per `tools/call` via either rail:
 
-- **Lightning (L402)** — `Authorization: L402 <token>:<preimage>`. 10–25 sats/call across 5 tools. The default; no account needed.
-- **Fiat credits (Stripe)** — `Authorization: Bearer loop_<credit_key>`. Buy a credit key at [`api.loopxxi.com/ai-credits`](https://api.loopxxi.com/ai-credits) ($10/$25/$50 packs → sats at the live BTC price). loop-mcp forwards the key to Loop Gateway's `POST /v1/credits/debit`, which atomically debits the prepaid sats ledger. Same 1:1 sats pricing as L402.
+- **Lightning (L402):** `Authorization: L402 <token>:<preimage>`. Each valid proof is single-use and bound to the requested tool.
+- **Fiat credits (Stripe):** `Authorization: Bearer loop_<credit_key>`. Buy a $10, $25, or $50 credit key at [`api.loopxxi.com/ai-credits`](https://api.loopxxi.com/ai-credits). loop-mcp calls Loop Gateway's `POST /v1/credits/debit` to atomically debit the prepaid balance.
 
 A request with no auth returns `HTTP 402` with a Lightning invoice (L402) and, in the body, a pointer to the fiat refill URL. Insufficient fiat balance returns `402` with `refill_url: https://api.loopxxi.com/ai-credits`.
 
 ### Free try (no wallet required)
 
-`POST https://mcp.loopxxi.com/try/btc_price` returns the live Bitcoin price for free — a read-only lead-gen endpoint so you can see a tool's output before wiring up payment.
+`POST https://mcp.loopxxi.com/try/btc_price` returns the live Bitcoin price for free. It is a read-only preview of a tool result before payment setup.
 
 ### L402 discovery manifest
 
@@ -69,7 +79,7 @@ The script never pays — it only reads the manifest and makes a go/no-go decisi
 
 ### How to call (L402 flow)
 
-The agent flow is three HTTP calls: **challenge → pay → retry**. On the first `tools/call` with no payment, the server returns `HTTP 402` with a BOLT11 invoice and an L402 token. Pay the invoice over Lightning, then retry the same request with `Authorization: L402 <token>:<preimage>`. The server verifies the preimage statelessly and serves the result. No database, no session.
+The agent flow is three HTTP calls: **challenge, pay, retry**. On the first `tools/call` with no payment, the server returns `HTTP 402` with a BOLT11 invoice and an L402 token. Pay the invoice over Lightning, then retry the same request with `Authorization: L402 <token>:<preimage>`. The server verifies the preimage, consumes the proof once, and serves the result.
 
 > **Parsing note:** new challenges expose an opaque base64url token in the `WWW-Authenticate` `token` and legacy `macaroon` fields. Retry with `Authorization: L402 <token>:<preimage>` and split on the **last** colon, since the preimage is a colon-free 64-character hex string. The server also accepts pre-migration colon-delimited tokens during the compatibility window.
 
