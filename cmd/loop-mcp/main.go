@@ -293,6 +293,10 @@ func issueToken(secret, paymentHash, toolName string, ts int64) string {
 // verifyToken validates the token and returns (paymentHash, toolName, ok).
 // Tokens expire after 24 hours.
 func verifyToken(secret, token string) (paymentHash, toolName string, ok bool) {
+	return verifyTokenAt(secret, token, time.Now().Unix())
+}
+
+func verifyTokenAt(secret, token string, nowUnix int64) (paymentHash, toolName string, ok bool) {
 	// New challenges use base64url so indexers and legacy L402 parsers accept
 	// the opaque token. Continue accepting pre-migration colon-delimited tokens.
 	if decoded, err := base64.RawURLEncoding.DecodeString(token); err == nil {
@@ -307,7 +311,8 @@ func verifyToken(secret, token string) (paymentHash, toolName string, ok bool) {
 	if err != nil {
 		return "", "", false
 	}
-	if time.Now().Unix()-ts > 86400 {
+	age := nowUnix - ts
+	if age < 0 || age > 86400 {
 		return "", "", false
 	}
 	msg := fmt.Sprintf("%s:%s:%d", ph, tn, ts)
@@ -318,6 +323,16 @@ func verifyToken(secret, token string) (paymentHash, toolName string, ok bool) {
 		return "", "", false
 	}
 	return ph, tn, true
+}
+
+func verifyPaymentPreimage(paymentHash, preimage string) bool {
+	preimageBytes, err := hex.DecodeString(preimage)
+	if err != nil || len(preimageBytes) != 32 {
+		return false
+	}
+	hashBytes := sha256.Sum256(preimageBytes)
+	computedHash := hex.EncodeToString(hashBytes[:])
+	return hmac.Equal([]byte(strings.ToLower(paymentHash)), []byte(computedHash))
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -503,16 +518,11 @@ func l402Middleware(cfg Config) gin.HandlerFunc {
 			if lastColon > 0 {
 				token, preimage := cred[:lastColon], cred[lastColon+1:]
 				ph, tn, ok := verifyToken(cfg.MacaroonSecret, token)
-				if ok && tn == toolName {
-					preimageBytes, _ := hex.DecodeString(preimage)
-					hashBytes := sha256.Sum256(preimageBytes)
-					computedHash := hex.EncodeToString(hashBytes[:])
-					if computedHash == ph || preimage == "dev" {
-						c.Set("toolName", toolName)
-						c.Set("toolArgs", callParams.Arguments)
-						c.Next()
-						return
-					}
+				if ok && tn == toolName && verifyPaymentPreimage(ph, preimage) {
+					c.Set("toolName", toolName)
+					c.Set("toolArgs", callParams.Arguments)
+					c.Next()
+					return
 				}
 			}
 		}
@@ -623,6 +633,26 @@ func dispatchTool(name string, args json.RawMessage) (interface{}, error) {
 		return tools.HandleTxDecodeExplain(args)
 	case "optimal_send_window":
 		return tools.HandleOptimalSendWindow(args)
+	case "json_validate":
+		return tools.HandleJSONValidate(args)
+	case "json_extract":
+		return tools.HandleJSONExtract(args)
+	case "csv_to_json":
+		return tools.HandleCSVToJSON(args)
+	case "text_analyze":
+		return tools.HandleTextAnalyze(args)
+	case "hash_generate":
+		return tools.HandleHashGenerate(args)
+	case "base64_convert":
+		return tools.HandleBase64Convert(args)
+	case "timestamp_convert":
+		return tools.HandleTimestampConvert(args)
+	case "uuid_generate":
+		return tools.HandleUUIDGenerate(args)
+	case "url_parse":
+		return tools.HandleURLParse(args)
+	case "jwt_decode":
+		return tools.HandleJWTDecode(args)
 	default:
 		return nil, fmt.Errorf("no handler for tool: %s", name)
 	}
@@ -647,19 +677,14 @@ func handleRESTL402Tool(cfg Config, toolName string) gin.HandlerFunc {
 			if lastColon > 0 {
 				token, preimage := cred[:lastColon], cred[lastColon+1:]
 				ph, tn, ok := verifyToken(cfg.MacaroonSecret, token)
-				if ok && tn == toolName {
-					preimageBytes, _ := hex.DecodeString(preimage)
-					hashBytes := sha256.Sum256(preimageBytes)
-					computedHash := hex.EncodeToString(hashBytes[:])
-					if computedHash == ph || preimage == "dev" {
-						result, err := dispatchTool(toolName, json.RawMessage("{}"))
-						if err != nil {
-							c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
-							return
-						}
-						c.JSON(http.StatusOK, gin.H{"tool": toolName, "paid": true, "result": result})
+				if ok && tn == toolName && verifyPaymentPreimage(ph, preimage) {
+					result, err := dispatchTool(toolName, json.RawMessage("{}"))
+					if err != nil {
+						c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 						return
 					}
+					c.JSON(http.StatusOK, gin.H{"tool": toolName, "paid": true, "result": result})
+					return
 				}
 			}
 		}
