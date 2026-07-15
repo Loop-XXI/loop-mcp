@@ -42,6 +42,16 @@ func All() []Tool {
 		lightningAddressResolveTool(),
 		txDecodeExplainTool(),
 		optimalSendWindowTool(),
+		jsonValidateTool(),
+		jsonExtractTool(),
+		csvToJSONTool(),
+		textAnalyzeTool(),
+		hashGenerateTool(),
+		base64ConvertTool(),
+		timestampConvertTool(),
+		uuidGenerateTool(),
+		urlParseTool(),
+		jwtDecodeTool(),
 	}
 }
 
@@ -572,7 +582,7 @@ type mempoolBlock struct {
 	ID     string `json:"id"`
 	Height int    `json:"height"`
 	Timestamp int64 `json:"timestamp"`
-	MedianFee float64 `json:"medianFee` // sat/vB (median fee rate of transactions in the block)
+	MedianFee float64 `json:"medianFee"` // sat/vB (median fee rate of transactions in the block)
 }
 
 // HandleOptimalSendWindow synthesizes a fee-timing recommendation from public
