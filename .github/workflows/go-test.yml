@@ -16,5 +16,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22.x'
-          cache: true
-      - run: go test ./...
+          cache: false
+      - name: Resolve modules
+        run: go mod tidy
+      - name: Run tests
+        run: go test ./...
