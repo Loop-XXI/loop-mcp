@@ -28,6 +28,137 @@ footer{padding:40px 0}.footer-row{display:flex;justify-content:space-between;gap
 @media(max-width:860px){.tools{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-right:0}.stat:nth-child(-n+2){border-bottom:1px solid var(--line)}.buy-grid{grid-template-columns:1fr}.section-head{display:block}.section-copy{margin-top:16px}}
 @media(max-width:580px){.wrap{padding:0 20px}.nav a:first-child{display:none}.hero{padding:64px 0 48px}h1{font-size:46px}.lede{font-size:17px}.tools{grid-template-columns:1fr}.stats{margin-top:48px}.stat{padding:18px 12px}.section-head{margin-bottom:24px}section{padding:52px 0}}
 </style>
+<style>/* LoopXXI Symmetry System v2.0
+   Standing visual rule: every public surface resolves around a clear centerline,
+   equal outer margins, paired spacing, equal component geometry, and mirrored
+   responsive behavior. Content remains left-aligned only where reading or form
+   completion benefits from it. */
+:root{
+  --sym-bg:#0a0a0a;
+  --sym-surface:#141412;
+  --sym-ink:#f5f5f4;
+  --sym-muted:#9b9890;
+  --sym-dim:#737069;
+  --sym-line:#292824;
+  --sym-max:1120px;
+  --sym-gutter:28px;
+  --sym-gap:16px;
+  --sym-radius:14px;
+  --sym-section:80px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;background:var(--sym-bg)}
+body{margin:0;background:var(--sym-bg);color:var(--sym-ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-feature-settings:"ss01","cv11";line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:var(--sym-ink);color:var(--sym-bg)}
+a{color:inherit}
+.wrap,.page{width:min(var(--sym-max),calc(100% - (var(--sym-gutter) * 2)));max-width:none;margin-inline:auto;padding-left:0;padding-right:0}
+
+/* Balanced frame */
+nav{min-height:76px;border-bottom:1px solid var(--sym-line)}
+.logo img{height:27px;width:auto}.wordmark,.brand{letter-spacing:-.025em}
+.links,.navlinks,.nav{gap:24px}
+main{width:100%}
+footer{border-top:1px solid var(--sym-line)}
+.footer-row,footer:not(.page footer){align-items:center}
+
+/* Centerline */
+.hero,header.hero,main>.wrap>header,main.wrap>.kicker,main.wrap>h1,main.wrap>.dek{text-align:center;margin-left:auto;margin-right:auto}
+.hero{max-width:980px}
+.hero h1,.hero p,.hero-copy,.lede,header p{margin-left:auto;margin-right:auto}
+.hero h1{max-width:15ch}.hero-copy,.hero p{max-width:760px}
+.actions,.jump{justify-content:center}
+.kicker,.eyebrow{text-align:center}
+
+/* Symmetric headings */
+.section-head{display:flex;flex-direction:column;align-items:center!important;justify-content:center;text-align:center;gap:14px;margin-left:auto;margin-right:auto}
+.section-head>div,.section-head>p{max-width:720px!important;margin-left:auto!important;margin-right:auto!important}
+section>.wrap>.eyebrow,section>.wrap>h2,section>.wrap>.lede,.wrap>section>.eyebrow,.wrap>section>h2,.wrap>section>.lede{text-align:center;margin-left:auto;margin-right:auto}
+section>.eyebrow,section>h2,section>.lede{text-align:center;margin-left:auto;margin-right:auto}
+
+/* Equal geometry */
+.cards,.tools,.deliverables,.steps,.machine,.rails,.buy-grid,.facts,.voice-grid,.logo-grid,.pack-grid,.packs{align-items:stretch}
+.card,.tool,.panel,.endpoint,.machine-card,.rail,.buy-card,.voice-card,.logo-cell,.pack{height:100%;border-radius:var(--sym-radius)}
+.cards>.card,.tools>.tool,.deliverables>.card,.steps>.card,.machine>.machine-card,.rails>.rail,.buy-grid>.buy-card,.facts>.card,.voice-grid>.voice-card,.packs>.pack{display:flex;flex-direction:column}
+.card h3,.tool h3,.panel h3,.endpoint h3,.machine-card h3,.rail h3,.buy-card h3{text-wrap:balance}
+.card-actions,.card .actions,.rail .actions,.buy-card .actions{margin-top:auto}
+
+/* Symmetric metrics and dividers */
+.proofbar,.summary,.tool-summary,.stats{display:grid;grid-auto-columns:1fr;text-align:center}
+.proof,.summary>div,.metric,.stat{display:flex;min-height:96px;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.proof strong,.summary strong,.metric strong,.stat strong{font-variant-numeric:tabular-nums}
+
+/* Pair layouts */
+.split,.facts,.rails,.buy-grid,.machine,.voice-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sym-gap)}
+.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sym-gap)}
+.deliverables,.steps,.cards,.tools,.pack-grid,.packs{gap:var(--sym-gap)}
+.endpoints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.endpoint{display:flex;flex-direction:column;text-align:center}
+.endpoint a{align-self:center}.endpoint code{margin-top:auto;padding-top:18px}
+
+/* Forms stay readable while their frame remains perfectly balanced */
+.preflight-panel,.panel,.receipt,.quickstart,.how,.try,.result,.notice{border-radius:var(--sym-radius)}
+.preflight-panel>h2,.preflight-panel>.lede,.preflight-panel>.eyebrow{text-align:center;margin-left:auto;margin-right:auto}
+.form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sym-gap)}
+.form-row{justify-content:center;text-align:center}.form-note{max-width:560px}
+textarea,input,select,button{font:inherit}
+
+/* Long-form pages use a centered reading axis */
+main.wrap>article,article:not(.card):not(.product){margin-left:auto;margin-right:auto}
+main.wrap>.stamp,article .stamp{justify-content:space-between}
+.agent{text-align:center}.agent p{max-width:760px;margin-left:auto;margin-right:auto}
+
+/* Product catalog balance */
+.product{grid-template-columns:repeat(2,minmax(0,1fr))}
+.product-main,.product-side{display:flex;flex-direction:column;justify-content:center}
+.product-side{text-align:center;align-items:center}.product-side .actions{justify-content:center;width:100%}
+.product-side .side-copy{max-width:360px}
+.tool-group-head{padding-left:2px;padding-right:2px}
+.tool-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+.machine{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+/* Brand page joins the public system */
+.page{padding-top:80px;padding-bottom:64px;background:var(--sym-bg);color:var(--sym-ink)}
+.page .section{margin-bottom:80px}
+.page .section-label{color:var(--sym-muted);border-color:var(--sym-line);text-align:center}
+.page .brand-name,.page .brand-tagline{text-align:center;margin-left:auto;margin-right:auto}
+.page header.section>img{display:block;margin-left:auto;margin-right:auto}
+.page .logo-cell,.page .voice-card{background:var(--sym-surface);border-color:var(--sym-line)}
+.page .logo-cell:not(.dark){background:var(--sym-ink);color:var(--sym-bg)}
+.page .swatches{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px}
+.page .swatch{min-width:0;text-align:center}.page .swatch-chip{width:100%}
+.page .type-row{display:grid;grid-template-columns:160px 1fr;gap:24px;border-color:var(--sym-line)}
+.page .type-meta,.page .brand-tagline,.page .voice-card li,.page .rule,.page footer{color:var(--sym-muted)}
+.page .voice-card.do h4{color:var(--sym-ink)}
+.page .rule-num{background:var(--sym-ink);color:var(--sym-bg)}
+
+/* AI credit storefront */
+.credit-shell{width:min(var(--sym-max),calc(100% - (var(--sym-gutter) * 2)));margin:auto}
+.credit-hero{text-align:center;padding:84px 0 58px}.credit-hero h1{font-size:clamp(48px,8vw,80px);line-height:1;letter-spacing:-.055em;font-weight:520;margin:18px auto 24px}.credit-hero p{max-width:720px;margin:auto;color:var(--sym-muted);font-size:20px}
+.packs{grid-template-columns:repeat(3,minmax(0,1fr))}.pack{text-align:center;align-items:stretch}.pack .credits{min-height:44px}.pack button{margin-top:auto}
+.credit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sym-gap);margin-top:48px}.credit-grid>*{margin-top:0;height:100%}
+
+@media(max-width:900px){
+  :root{--sym-section:64px}
+  .cards,.tools,.deliverables,.steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .endpoints{grid-template-columns:1fr}
+  .endpoint{border-right:0!important;border-bottom:1px solid var(--sym-line)}.endpoint:last-child{border-bottom:0}
+  .page .swatches{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  :root{--sym-gutter:20px;--sym-gap:12px}
+  .links a:not(.nav-cta),.navlinks a:not(.buy):not(.cta),.nav a:first-child{display:none}
+  .hero{padding-top:64px;padding-bottom:52px}
+  .hero h1{font-size:clamp(46px,13vw,58px)}
+  .actions .btn,.actions .button,.jump a{width:100%}
+  .split,.grid,.facts,.rails,.buy-grid,.machine,.voice-grid,.cards,.tools,.deliverables,.steps,.product,.form-grid,.credit-grid,.packs{grid-template-columns:1fr}
+  .field.wide{grid-column:auto}
+  .product-side{border-left:0!important;border-top:1px solid var(--sym-line)}
+  .tool-summary,.proofbar,.summary,.stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .page{padding-top:48px}.page .swatches{grid-template-columns:repeat(2,minmax(0,1fr))}.page .type-row{grid-template-columns:1fr;gap:8px}
+  main.wrap>.stamp,article .stamp,footer,.footer-row{justify-content:center!important;text-align:center;flex-direction:column;gap:12px}
+}
+@media(max-width:420px){.tool-summary,.proofbar,.summary,.stats{grid-template-columns:1fr!important}.page .swatches{grid-template-columns:1fr 1fr}}
+</style>
 </head>
 <body>
 <header><div class="wrap"><a class="brand" href="https://loopxxi.com">Loop<span>XXI</span> / loop-mcp</a><nav class="nav"><a href="https://loopxxi.com/products">All products</a><a href="https://github.com/Loop-XXI/loop-mcp">Docs</a><a href="https://api.loopxxi.com/ai-credits">Buy credits</a></nav></div></header>
