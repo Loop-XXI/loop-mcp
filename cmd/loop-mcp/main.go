@@ -731,198 +731,30 @@ func handleRESTL402Tool(cfg Config, toolName string) gin.HandlerFunc {
 // landingHTML is the branded public landing page served at GET /.
 // Kept minimal and on-brand (Obsidian/Bone, Inter, no accent color).
 const landingHTML = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>loop-mcp | 15 pay-per-call tools for AI agents</title>
-<meta name="description" content="One MCP endpoint for 15 focused Bitcoin, data, text, and developer utilities. Pay per call with Lightning or prepaid fiat credits.">
-<meta property="og:title" content="loop-mcp by LoopXXI">
-<meta property="og:description" content="15 focused tools. One endpoint. Pay only for what your agent uses.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://mcp.loopxxi.com">
-<meta name="theme-color" content="#0a0a0a">
-<link rel="preconnect" href="https://rsms.me/">
-<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-<link rel="icon" type="image/png" href="https://loopxxi.com/LoopXXI-Logo.png">
-<style>
-:root{--bg:#0a0a0a;--ink:#f5f5f4;--muted:#96938b;--dim:#65615b;--line:#292824;--surface:#141412;--green:#42d881}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;font-feature-settings:"ss01","cv11";font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
-::selection{background:var(--ink);color:var(--bg)}
-a{color:inherit;text-decoration:none}.wrap{max-width:1120px;margin:0 auto;padding:0 32px}
-header{border-bottom:1px solid var(--line)}header .wrap{height:72px;display:flex;align-items:center;justify-content:space-between}.brand{font-size:17px;font-weight:650;letter-spacing:-.03em}.brand span{color:var(--muted);font-weight:430}.nav{display:flex;align-items:center;gap:24px}.nav a{font-size:14px;color:var(--muted)}.nav a:hover{color:var(--ink)}
-.hero{padding:96px 0 72px}.status{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid #245638;border-radius:999px;color:var(--green);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}.dot{width:6px;height:6px;border-radius:50%;background:var(--green)}h1{font-size:clamp(44px,7vw,78px);line-height:1.01;letter-spacing:-.055em;font-weight:520;max-width:900px;margin-top:28px}.lede{font-size:20px;color:var(--muted);max-width:680px;margin-top:28px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 20px;border-radius:8px;border:1px solid var(--line);font-size:14px;font-weight:600}.button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}.button:hover{opacity:.86}.stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:72px}.stat{padding:24px 20px;border-right:1px solid var(--line)}.stat:last-child{border-right:0}.stat strong{display:block;font-size:24px;letter-spacing:-.03em}.stat span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
-section{padding:72px 0;border-bottom:1px solid var(--line)}.section-head{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:28px}.eyebrow{font-size:11px;font-weight:650;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}h2{font-size:clamp(28px,4vw,42px);font-weight:520;letter-spacing:-.04em;line-height:1.1;margin-top:10px}.section-copy{color:var(--muted);max-width:520px;font-size:15px}
-.category{margin-top:40px}.category:first-of-type{margin-top:0}.category-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.category-title h3{font-size:14px;font-weight:620}.category-title span{font-size:12px;color:var(--dim)}.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.tool{min-height:168px;padding:22px;border:1px solid var(--line);border-radius:10px;background:var(--surface);display:flex;flex-direction:column}.tool:hover{border-color:#45423d}.tool-top{display:flex;justify-content:space-between;gap:12px;align-items:start}.tool-name{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:650;word-break:break-word}.price{font-size:11px;color:var(--green);font-weight:650;white-space:nowrap}.tool p{font-size:13px;color:var(--muted);line-height:1.55;margin-top:14px}.tool .input{font-size:11px;color:var(--dim);margin-top:auto;padding-top:18px}
-.buy-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.buy-card{border:1px solid var(--line);border-radius:12px;padding:28px;background:var(--surface)}.buy-card h3{font-size:20px;letter-spacing:-.025em}.buy-card p{font-size:14px;color:var(--muted);margin:10px 0 24px}.buy-card code{font-size:12px;color:var(--ink);word-break:break-all}.manifest{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:#0d0d0c;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted);overflow:auto}.try{margin-top:16px;padding:24px;border:1px solid var(--line);border-radius:12px}.try h3{font-size:17px}.try p{font-size:13px;color:var(--muted);margin:6px 0 16px}.try-btn{padding:10px 18px;border:0;border-radius:8px;background:var(--ink);color:var(--bg);font-weight:650;cursor:pointer}.try-btn:disabled{opacity:.5}#result{display:none;margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre-wrap;word-break:break-all}#result.show{display:block}
-footer{padding:40px 0}.footer-row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:13px;color:var(--muted)}.footer-links{display:flex;gap:18px}
-@media(max-width:860px){.tools{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-right:0}.stat:nth-child(-n+2){border-bottom:1px solid var(--line)}.buy-grid{grid-template-columns:1fr}.section-head{display:block}.section-copy{margin-top:16px}}
-@media(max-width:580px){.wrap{padding:0 20px}.nav a:first-child{display:none}.hero{padding:64px 0 48px}h1{font-size:46px}.lede{font-size:17px}.tools{grid-template-columns:1fr}.stats{margin-top:48px}.stat{padding:18px 12px}.section-head{margin-bottom:24px}section{padding:52px 0}}
-</style>
-<style>/* LoopXXI Symmetry System v2.0
-   Standing visual rule: every public surface resolves around a clear centerline,
-   equal outer margins, paired spacing, equal component geometry, and mirrored
-   responsive behavior. Content remains left-aligned only where reading or form
-   completion benefits from it. */
-:root{
-  --sym-bg:#0a0a0a;
-  --sym-surface:#141412;
-  --sym-ink:#f5f5f4;
-  --sym-muted:#9b9890;
-  --sym-dim:#737069;
-  --sym-line:#292824;
-  --sym-max:1120px;
-  --sym-gutter:28px;
-  --sym-gap:16px;
-  --sym-radius:14px;
-  --sym-section:80px;
-}
-*,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth;background:var(--sym-bg)}
-body{margin:0;background:var(--sym-bg);color:var(--sym-ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-feature-settings:"ss01","cv11";line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-::selection{background:var(--sym-ink);color:var(--sym-bg)}
-a{color:inherit}
-.wrap,.page{width:min(var(--sym-max),calc(100% - (var(--sym-gutter) * 2)));max-width:none;margin-inline:auto;padding-left:0;padding-right:0}
-
-/* Balanced frame */
-nav{min-height:76px;border-bottom:1px solid var(--sym-line)}
-.logo img{height:27px;width:auto}.wordmark,.brand{letter-spacing:-.025em}
-.links,.navlinks,.nav{gap:24px}
-main{width:100%}
-footer{border-top:1px solid var(--sym-line)}
-.footer-row,footer:not(.page footer){align-items:center}
-
-/* Centerline */
-.hero,header.hero,main>.wrap>header,main.wrap>.kicker,main.wrap>h1,main.wrap>.dek{text-align:center;margin-left:auto;margin-right:auto}
-.hero{max-width:980px}
-.hero h1,.hero p,.hero-copy,.lede,header p{margin-left:auto;margin-right:auto}
-.hero h1{max-width:15ch}.hero-copy,.hero p{max-width:760px}
-.actions,.jump{justify-content:center}
-.kicker,.eyebrow{text-align:center}
-
-/* Symmetric headings */
-.section-head{display:flex;flex-direction:column;align-items:center!important;justify-content:center;text-align:center;gap:14px;margin-left:auto;margin-right:auto}
-.section-head>div,.section-head>p{max-width:720px!important;margin-left:auto!important;margin-right:auto!important}
-section>.wrap>.eyebrow,section>.wrap>h2,section>.wrap>.lede,.wrap>section>.eyebrow,.wrap>section>h2,.wrap>section>.lede{text-align:center;margin-left:auto;margin-right:auto}
-section>.eyebrow,section>h2,section>.lede{text-align:center;margin-left:auto;margin-right:auto}
-
-/* Equal geometry */
-.cards,.tools,.deliverables,.steps,.machine,.rails,.buy-grid,.facts,.voice-grid,.logo-grid,.pack-grid,.packs{align-items:stretch}
-.card,.tool,.panel,.endpoint,.machine-card,.rail,.buy-card,.voice-card,.logo-cell,.pack{height:100%;border-radius:var(--sym-radius)}
-.cards>.card,.tools>.tool,.deliverables>.card,.steps>.card,.machine>.machine-card,.rails>.rail,.buy-grid>.buy-card,.facts>.card,.voice-grid>.voice-card,.packs>.pack{display:flex;flex-direction:column}
-.card h3,.tool h3,.panel h3,.endpoint h3,.machine-card h3,.rail h3,.buy-card h3{text-wrap:balance}
-.card-actions,.card .actions,.rail .actions,.buy-card .actions{margin-top:auto}
-
-/* Symmetric metrics and dividers */
-.proofbar,.summary,.tool-summary,.stats{display:grid;grid-auto-columns:1fr;text-align:center}
-.proof,.summary>div,.metric,.stat{display:flex;min-height:96px;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-.proof strong,.summary strong,.metric strong,.stat strong{font-variant-numeric:tabular-nums}
-
-/* Pair layouts */
-.split,.facts,.rails,.buy-grid,.machine,.voice-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sym-gap)}
-.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sym-gap)}
-.deliverables,.steps,.cards,.tools,.pack-grid,.packs{gap:var(--sym-gap)}
-.endpoints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-.endpoint{display:flex;flex-direction:column;text-align:center}
-.endpoint a{align-self:center}.endpoint code{margin-top:auto;padding-top:18px}
-
-/* Forms stay readable while their frame remains perfectly balanced */
-.preflight-panel,.panel,.receipt,.quickstart,.how,.try,.result,.notice{border-radius:var(--sym-radius)}
-.preflight-panel>h2,.preflight-panel>.lede,.preflight-panel>.eyebrow{text-align:center;margin-left:auto;margin-right:auto}
-.form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sym-gap)}
-.form-row{justify-content:center;text-align:center}.form-note{max-width:560px}
-textarea,input,select,button{font:inherit}
-
-/* Long-form pages use a centered reading axis */
-main.wrap>article,article:not(.card):not(.product){margin-left:auto;margin-right:auto}
-main.wrap>.stamp,article .stamp{justify-content:space-between}
-.agent{text-align:center}.agent p{max-width:760px;margin-left:auto;margin-right:auto}
-
-/* Product catalog balance */
-.product{grid-template-columns:repeat(2,minmax(0,1fr))}
-.product-main,.product-side{display:flex;flex-direction:column;justify-content:center}
-.product-side{text-align:center;align-items:center}.product-side .actions{justify-content:center;width:100%}
-.product-side .side-copy{max-width:360px}
-.tool-group-head{padding-left:2px;padding-right:2px}
-.tool-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
-.machine{grid-template-columns:repeat(2,minmax(0,1fr))}
-
-/* Brand page joins the public system */
-.page{padding-top:80px;padding-bottom:64px;background:var(--sym-bg);color:var(--sym-ink)}
-.page .section{margin-bottom:80px}
-.page .section-label{color:var(--sym-muted);border-color:var(--sym-line);text-align:center}
-.page .brand-name,.page .brand-tagline{text-align:center;margin-left:auto;margin-right:auto}
-.page header.section>img{display:block;margin-left:auto;margin-right:auto}
-.page .logo-cell,.page .voice-card{background:var(--sym-surface);border-color:var(--sym-line)}
-.page .logo-cell:not(.dark){background:var(--sym-ink);color:var(--sym-bg)}
-.page .swatches{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px}
-.page .swatch{min-width:0;text-align:center}.page .swatch-chip{width:100%}
-.page .type-row{display:grid;grid-template-columns:160px 1fr;gap:24px;border-color:var(--sym-line)}
-.page .type-meta,.page .brand-tagline,.page .voice-card li,.page .rule,.page footer{color:var(--sym-muted)}
-.page .voice-card.do h4{color:var(--sym-ink)}
-.page .rule-num{background:var(--sym-ink);color:var(--sym-bg)}
-
-/* AI credit storefront */
-.credit-shell{width:min(var(--sym-max),calc(100% - (var(--sym-gutter) * 2)));margin:auto}
-.credit-hero{text-align:center;padding:84px 0 58px}.credit-hero h1{font-size:clamp(48px,8vw,80px);line-height:1;letter-spacing:-.055em;font-weight:520;margin:18px auto 24px}.credit-hero p{max-width:720px;margin:auto;color:var(--sym-muted);font-size:20px}
-.packs{grid-template-columns:repeat(3,minmax(0,1fr))}.pack{text-align:center;align-items:stretch}.pack .credits{min-height:44px}.pack button{margin-top:auto}
-.credit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sym-gap);margin-top:48px}.credit-grid>*{margin-top:0;height:100%}
-
-@media(max-width:900px){
-  :root{--sym-section:64px}
-  .cards,.tools,.deliverables,.steps{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .endpoints{grid-template-columns:1fr}
-  .endpoint{border-right:0!important;border-bottom:1px solid var(--sym-line)}.endpoint:last-child{border-bottom:0}
-  .page .swatches{grid-template-columns:repeat(4,minmax(0,1fr))}
-}
-@media(max-width:700px){
-  :root{--sym-gutter:20px;--sym-gap:12px}
-  .links a:not(.nav-cta),.navlinks a:not(.buy):not(.cta),.nav a:first-child{display:none}
-  .hero{padding-top:64px;padding-bottom:52px}
-  .hero h1{font-size:clamp(46px,13vw,58px)}
-  .actions .btn,.actions .button,.jump a{width:100%}
-  .split,.grid,.facts,.rails,.buy-grid,.machine,.voice-grid,.cards,.tools,.deliverables,.steps,.product,.form-grid,.credit-grid,.packs{grid-template-columns:1fr}
-  .field.wide{grid-column:auto}
-  .product-side{border-left:0!important;border-top:1px solid var(--sym-line)}
-  .tool-summary,.proofbar,.summary,.stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  .page{padding-top:48px}.page .swatches{grid-template-columns:repeat(2,minmax(0,1fr))}.page .type-row{grid-template-columns:1fr;gap:8px}
-  main.wrap>.stamp,article .stamp,footer,.footer-row{justify-content:center!important;text-align:center;flex-direction:column;gap:12px}
-}
-@media(max-width:420px){.tool-summary,.proofbar,.summary,.stats{grid-template-columns:1fr!important}.page .swatches{grid-template-columns:1fr 1fr}}
-</style>
-</head>
-<body>
-<header><div class="wrap"><a class="brand" href="https://loopxxi.com">Loop<span>XXI</span> / loop-mcp</a><nav class="nav"><a href="https://loopxxi.com/products">All products</a><a href="https://github.com/Loop-XXI/loop-mcp">Docs</a><a href="https://api.loopxxi.com/ai-credits">Buy credits</a></nav></div></header>
-<main>
-<div class="wrap"><div class="hero"><div class="status"><span class="dot"></span>15 tools live</div><h1>Small jobs should take one call.</h1><p class="lede">One MCP endpoint for focused Bitcoin, data, text, and developer utilities. Skip glue code, package hunting, and separate accounts. Pay only for the calls your agent uses.</p><div class="actions"><a class="button primary" href="https://api.loopxxi.com/ai-credits">Buy prepaid credits</a><a class="button" href="/.well-known/agent-payments.json">Inspect agent manifest</a></div><div class="stats"><div class="stat"><strong>15</strong><span>live tools</span></div><div class="stat"><strong>5-25</strong><span>sats per call</span></div><div class="stat"><strong>2</strong><span>payment rails</span></div><div class="stat"><strong>0</strong><span>subscriptions</span></div></div></div></div>
-<section><div class="wrap"><div class="section-head"><div><div class="eyebrow">Tool catalog</div><h2>Useful primitives, ready now.</h2></div><p class="section-copy">Every tool returns structured JSON. Discovery is free. Execution uses the same endpoint and the same prepaid key or Lightning payment.</p></div>
-<div class="category"><div class="category-title"><h3>Bitcoin and Lightning intelligence</h3><span>5 tools</span></div><div class="tools">
-<div class="tool"><div class="tool-top"><span class="tool-name">btc_price</span><span class="price">10 sats</span></div><p>Current Bitcoin price in USD and major fiat currencies.</p><div class="input">Input: optional currencies</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">btc_send_decision</span><span class="price">15 sats</span></div><p>Send now, wait, or urgent-only verdict using live fee and mempool conditions.</p><div class="input">Input: target, amount</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">lightning_address_resolve</span><span class="price">10 sats</span></div><p>Resolve a Lightning Address through the complete LNURL-pay flow.</p><div class="input">Input: address, amount</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">tx_decode_explain</span><span class="price">25 sats</span></div><p>Turn a transaction ID into a concise, structured explanation with fee and script flags.</p><div class="input">Input: txid</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">optimal_send_window</span><span class="price">25 sats</span></div><p>Estimate the most economical send window from live congestion and fee conditions.</p><div class="input">Input: target, horizon</div></div>
-</div></div>
-<div class="category"><div class="category-title"><h3>Data and developer utilities</h3><span>10 tools</span></div><div class="tools">
-<div class="tool"><div class="tool-top"><span class="tool-name">json_validate</span><span class="price">5 sats</span></div><p>Validate, normalize, classify, and hash JSON in one call.</p><div class="input">Input: JSON text</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">json_extract</span><span class="price">5 sats</span></div><p>Read a nested value using a simple path with array indexes.</p><div class="input">Input: JSON text, path</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">csv_to_json</span><span class="price">10 sats</span></div><p>Convert bounded CSV, TSV, semicolon, or pipe data to structured JSON.</p><div class="input">Input: delimited text</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">text_analyze</span><span class="price">5 sats</span></div><p>Count words, lines, sentences, estimated tokens, and reading time.</p><div class="input">Input: text</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">hash_generate</span><span class="price">5 sats</span></div><p>Create SHA-256 or SHA-512 digests in hex or Base64.</p><div class="input">Input: text, algorithm</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">base64_convert</span><span class="price">5 sats</span></div><p>Encode or decode standard and URL-safe Base64.</p><div class="input">Input: data, action</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">timestamp_convert</span><span class="price">5 sats</span></div><p>Normalize Unix, RFC3339, and date strings to UTC representations.</p><div class="input">Input: timestamp</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">uuid_generate</span><span class="price">5 sats</span></div><p>Generate up to 100 cryptographically random UUIDv4 values.</p><div class="input">Input: count</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">url_parse</span><span class="price">5 sats</span></div><p>Split an HTTP or HTTPS URL into safe structured components without fetching it.</p><div class="input">Input: URL</div></div>
-<div class="tool"><div class="tool-top"><span class="tool-name">jwt_decode</span><span class="price">5 sats</span></div><p>Decode JWT header and payload for inspection. Never presented as signature verification.</p><div class="input">Input: JWT</div></div>
-</div></div></div></section>
-<section><div class="wrap"><div class="section-head"><div><div class="eyebrow">Two ways to pay</div><h2>Use the rail you already have.</h2></div><p class="section-copy">No recurring plan. No per-tool account. The payment credential travels with the request.</p></div><div class="buy-grid"><div class="buy-card"><h3>Prepaid credits</h3><p>Buy a $10, $25, or $50 credit key with Stripe. Send the key as a Bearer token on every tool call.</p><a class="button primary" href="https://api.loopxxi.com/ai-credits">Buy credits</a><div class="manifest">Authorization: Bearer loop_&lt;credit_key&gt;</div></div><div class="buy-card"><h3>Lightning L402</h3><p>Call without authentication, pay the returned BOLT11 invoice, then retry with the token and preimage.</p><a class="button" href="/.well-known/l402-manifest.json">Open L402 manifest</a><div class="manifest">Authorization: L402 &lt;token&gt;:&lt;preimage&gt;</div></div></div><div class="try"><h3>Preview a real result for free</h3><p>The public preview calls btc_price with no wallet or credit key.</p><button class="try-btn" id="tryBtn" onclick="fetchPrice()">Get BTC price</button><div id="result"></div></div></div></section>
-<section><div class="wrap"><div class="section-head"><div><div class="eyebrow">Agent setup</div><h2>Discover first. Pay second.</h2></div><p class="section-copy">Fetch the machine-readable manifest to inspect names, schemas, exact prices, payment rails, and the maximum possible charge before execution.</p></div><div class="manifest">GET https://mcp.loopxxi.com/.well-known/agent-payments.json<br>GET https://mcp.loopxxi.com/mcp<br>POST https://mcp.loopxxi.com/mcp</div><div class="actions"><a class="button primary" href="https://github.com/Loop-XXI/loop-mcp">Read integration docs</a><a class="button" href="/mcp">List tools as JSON</a></div></div></section>
-</main>
-<footer><div class="wrap footer-row"><span>Loop XXI LLC</span><div class="footer-links"><a href="https://loopxxi.com/products">Products</a><a href="mailto:business@loopxxi.com">Contact</a><a href="https://github.com/Loop-XXI/loop-mcp">GitHub</a></div></div></footer>
-<script>async function fetchPrice(){var b=document.getElementById('tryBtn');var o=document.getElementById('result');b.disabled=true;b.textContent='Fetching';o.className='show';o.textContent='Calling btc_price';try{var r=await fetch('/try/btc_price',{method:'POST'});var j=await r.json();o.textContent=JSON.stringify(j,null,2)}catch(e){o.textContent='Error: '+e.message}b.disabled=false;b.textContent='Get BTC price'}</script>
-</body>
-</html>`
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>loop-mcp | 15 pay-per-call tools for AI agents</title><meta name="description" content="One MCP endpoint for 15 focused Bitcoin, data, text, and developer utilities. Pay per call with prepaid credits or Lightning L402."><meta name="theme-color" content="#050505"><link rel="preconnect" href="https://rsms.me/"><link rel="stylesheet" href="https://rsms.me/inter/inter.css"><style>
+:root{--bg:#050505;--ink:#fafafa;--dim:#8f8c86;--faint:#4a4844;--card:#0d0d0c;--line:#1f1e1b;--line2:#2c2a26;--btc:#f7931a;--btc-dim:#8a5310;--max:1160px}*,*::before,*::after{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}a{color:inherit;text-decoration:none}.wrap{width:min(var(--max),calc(100% - 48px));margin:auto}header{height:72px;border-bottom:1px solid var(--line);display:flex;align-items:center}header .wrap{display:flex;align-items:center;justify-content:space-between}.brand{font-size:14px;font-weight:650;letter-spacing:-.02em}.brand span{color:var(--btc)}nav{display:flex;align-items:center;gap:25px}nav a{font-size:13px;color:var(--dim)}nav a:hover{color:var(--ink)}nav .buy{color:var(--ink);border:1px solid var(--line2);border-radius:99px;padding:8px 16px}.kicker{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--btc)}
+.hero{text-align:center;padding:110px 0 96px;overflow:hidden}.hero h1{font-size:clamp(54px,8.6vw,100px);line-height:.95;letter-spacing:-.06em;font-weight:530;max-width:900px;margin:22px auto 24px}.hero .lede{font-size:18px;color:var(--dim);max-width:560px;margin:0 auto 38px;line-height:1.65}.actions{display:flex;gap:11px;justify-content:center;flex-wrap:wrap}.button{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 24px;border:1px solid var(--line2);border-radius:99px;font-size:13px;font-weight:650}.button.primary{background:var(--ink);color:#000;border-color:var(--ink)}.stats{display:grid;grid-template-columns:repeat(4,1fr);max-width:880px;margin:70px auto 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.stat{padding:25px 8px}.stat+.stat{border-left:1px solid var(--line)}.stat strong{display:block;font-size:30px;letter-spacing:-.03em}.stat span{display:block;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+section{padding:108px 0;border-top:1px solid var(--line)}.title{text-align:center;max-width:640px;margin:0 auto 64px}.title h2{font-size:clamp(38px,5vw,58px);line-height:1.02;letter-spacing:-.045em;font-weight:530;margin:14px 0}.title p{font-size:15px;color:var(--dim);margin:0}.tool-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.tool{aspect-ratio:1;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .18s,border-color .18s}.tool:hover{transform:translateY(-3px);border-color:var(--line2)}.tool-icon{width:42px;height:42px;border:1px solid #39342a;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--btc);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.tool code{font-size:11px;color:var(--ink);overflow-wrap:anywhere}.tool-price{font-size:10px;color:var(--dim)}.tool.hot{border-color:#3e301d;background:linear-gradient(145deg,#15120d,var(--card))}
+.rails{display:grid;grid-template-columns:1fr 1fr;gap:20px}.rail{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:50px 42px;text-align:center}.rail svg{width:74px;height:74px;margin-bottom:24px}.rail h3{font-size:29px;letter-spacing:-.03em;margin:10px 0 12px}.rail p{font-size:14px;color:var(--dim);max-width:370px;margin:0 auto 24px;line-height:1.65}.rail code{display:block;font-size:11px;color:var(--faint);padding:11px;border:1px solid var(--line);border-radius:9px;background:#080807;margin:0 0 25px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preview{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}.preview-art,.preview-copy{background:var(--card);border:1px solid var(--line);border-radius:20px}.preview-art{display:flex;align-items:center;justify-content:center;min-height:410px}.preview-art svg{width:62%;height:70%}.preview-copy{padding:52px;display:flex;flex-direction:column;justify-content:center}.preview-copy h3{font-size:38px;line-height:1.03;letter-spacing:-.04em;margin:14px 0}.preview-copy p{font-size:14px;color:var(--dim);line-height:1.65;margin:0 0 28px}.result{margin-top:18px;border:1px solid var(--line);border-radius:12px;background:#080807;padding:16px;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);min-height:54px}.result strong{color:var(--btc)}
+.machine{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.endpoint{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:31px}.endpoint svg{width:40px;height:40px;margin-bottom:18px}.endpoint h3{font-size:16px;margin:0 0 7px}.endpoint p{font-size:12.5px;color:var(--dim);margin:0 0 14px}.endpoint code{display:block;font-size:10px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--faint);font-size:12px}.foot{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap}.footlinks{display:flex;gap:22px;flex-wrap:wrap}@media(max-width:900px){.tool-grid{grid-template-columns:repeat(3,1fr)}.rails,.preview{grid-template-columns:1fr}.machine{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){nav a:not(.buy){display:none}.tool-grid{grid-template-columns:repeat(2,1fr)}.hero{padding-top:78px}.preview-copy{padding:38px 28px}}
+</style></head><body>
+<header><div class="wrap"><a class="brand" href="https://loopxxi.com">Loop<span>XXI</span> / loop-mcp</a><nav><a href="https://loopxxi.com/products.html">All products</a><a href="https://github.com/Loop-XXI/loop-mcp">Docs</a><a class="buy" href="https://api.loopxxi.com/ai-credits">Buy credits</a></nav></div></header>
+<main><section class="hero"><div class="wrap"><div class="kicker">15 tools live</div><h1>Small jobs should take one call.</h1><p class="lede">One MCP endpoint for Bitcoin, data, text, and developer utilities. Pay only for execution.</p><div class="actions"><a class="button primary" href="https://api.loopxxi.com/ai-credits">Buy prepaid credits</a><a class="button" href="/.well-known/agent-payments.json">Agent manifest</a></div><div class="stats"><div class="stat"><strong>15</strong><span>Tools</span></div><div class="stat"><strong>5–25</strong><span>Sats / call</span></div><div class="stat"><strong>2</strong><span>Payment rails</span></div><div class="stat"><strong>0</strong><span>Subscriptions</span></div></div></div></section>
+<section><div class="wrap"><div class="title"><div class="kicker">Tool catalog</div><h2>See the job. Call the tool.</h2><p>Discovery is free. Every result is structured JSON.</p></div><div class="tool-grid">
+<div class="tool hot"><div class="tool-icon">BTC</div><code>btc_price</code><span class="tool-price">10 sats</span></div><div class="tool hot"><div class="tool-icon">SEND</div><code>btc_send_decision</code><span class="tool-price">15 sats</span></div><div class="tool hot"><div class="tool-icon">LN</div><code>lightning_address_resolve</code><span class="tool-price">10 sats</span></div><div class="tool hot"><div class="tool-icon">TX</div><code>tx_decode_explain</code><span class="tool-price">25 sats</span></div><div class="tool hot"><div class="tool-icon">FEE</div><code>optimal_send_window</code><span class="tool-price">25 sats</span></div>
+<div class="tool"><div class="tool-icon">{ }</div><code>json_validate</code><span class="tool-price">5 sats</span></div><div class="tool"><div class="tool-icon">PATH</div><code>json_extract</code><span class="tool-price">5 sats</span></div><div class="tool"><div class="tool-icon">CSV</div><code>csv_to_json</code><span class="tool-price">10 sats</span></div><div class="tool"><div class="tool-icon">TXT</div><code>text_analyze</code><span class="tool-price">5 sats</span></div><div class="tool"><div class="tool-icon">#</div><code>hash_generate</code><span class="tool-price">5 sats</span></div>
+<div class="tool"><div class="tool-icon">64</div><code>base64_convert</code><span class="tool-price">5 sats</span></div><div class="tool"><div class="tool-icon">UTC</div><code>timestamp_convert</code><span class="tool-price">5 sats</span></div><div class="tool"><div class="tool-icon">ID</div><code>uuid_generate</code><span class="tool-price">5 sats</span></div><div class="tool"><div class="tool-icon">URL</div><code>url_parse</code><span class="tool-price">5 sats</span></div><div class="tool"><div class="tool-icon">JWT</div><code>jwt_decode</code><span class="tool-price">5 sats</span></div>
+</div></div></section>
+<section><div class="wrap"><div class="title"><div class="kicker">Two payment rails</div><h2>Use the rail you already have.</h2><p>The payment credential travels with the request.</p></div><div class="rails">
+<div class="rail"><svg viewBox="0 0 74 74" fill="none"><rect x="6" y="16" width="62" height="42" rx="7" stroke="#8f8c86" stroke-width="2.5"/><path d="M6 28H68" stroke="#8f8c86" stroke-width="2.5"/><rect x="14" y="40" width="18" height="5" rx="2.5" fill="#f7931a"/></svg><div class="kicker">Prepaid credits</div><h3>Buy once. Call directly.</h3><p>Fund a $10, $25, or $50 key with Stripe, then send it on every tool call.</p><code>Authorization: Bearer loop_&lt;credit_key&gt;</code><a class="button primary" href="https://api.loopxxi.com/ai-credits">Buy credits</a></div>
+<div class="rail"><svg viewBox="0 0 74 74" fill="none"><circle cx="37" cy="37" r="29" stroke="#8f8c86" stroke-width="2.5"/><path d="M41 18L27 40H37L33 56L48 33H38Z" fill="#f7931a" stroke="#f7931a" stroke-width="2" stroke-linejoin="round"/></svg><div class="kicker">Lightning L402</div><h3>Challenge. Pay. Retry.</h3><p>Pay the returned BOLT11 invoice and retry with the token and preimage.</p><code>Authorization: L402 &lt;token&gt;:&lt;preimage&gt;</code><a class="button" href="/.well-known/l402-manifest.json">L402 manifest</a></div>
+</div></div></section>
+<section><div class="wrap"><div class="preview"><div class="preview-art"><svg viewBox="0 0 300 300" fill="none"><circle cx="150" cy="150" r="118" stroke="#292824" stroke-width="3"/><circle cx="150" cy="150" r="80" stroke="#4a3a21" stroke-width="3"/><path d="M164 76L114 161H147L132 224L189 135H155Z" fill="#f7931a" stroke="#f7931a" stroke-width="3" stroke-linejoin="round"/></svg></div><div class="preview-copy"><div class="kicker">Free preview</div><h3>See a real result.</h3><p>Call the live Bitcoin price tool without a wallet, credit key, or account.</p><button id="try-btn" class="button primary" onclick="tryPrice()">Get BTC price</button><div id="try-result" class="result">Ready.</div></div></div></div></section>
+<section><div class="wrap"><div class="title"><div class="kicker">Agent setup</div><h2>Discover first. Pay second.</h2><p>Inspect names, schemas, exact prices, rails, and maximum possible charge.</p></div><div class="machine"><a class="endpoint" href="/.well-known/agent-payments.json"><svg viewBox="0 0 40 40" fill="none"><rect x="4" y="4" width="32" height="32" rx="8" stroke="#8f8c86" stroke-width="2"/><path d="M11 15H29M11 21H29M11 27H22" stroke="#f7931a" stroke-width="2" stroke-linecap="round"/></svg><h3>Payment manifest</h3><p>Names, schemas, prices, rails.</p><code>GET /.well-known/agent-payments.json</code></a><a class="endpoint" href="/mcp"><svg viewBox="0 0 40 40" fill="none"><path d="M7 13L20 5L33 13V27L20 35L7 27Z" stroke="#8f8c86" stroke-width="2"/><circle cx="20" cy="20" r="5" fill="#f7931a"/></svg><h3>MCP discovery</h3><p>Free tool listing and annotations.</p><code>GET /mcp</code></a><a class="endpoint" href="https://github.com/Loop-XXI/loop-mcp"><svg viewBox="0 0 40 40" fill="none"><path d="M11 9L3 20L11 31M29 9L37 20L29 31M24 5L16 35" stroke="#8f8c86" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>Integration docs</h3><p>Hosted calls and embedded transport.</p><code>github.com/Loop-XXI/loop-mcp</code></a></div></div></section></main>
+<footer><div class="wrap foot"><span>Loop XXI LLC</span><div class="footlinks"><a href="https://loopxxi.com/products.html">Products</a><a href="mailto:business@loopxxi.com">Contact</a><a href="https://github.com/Loop-XXI/loop-mcp">GitHub</a></div></div></footer>
+<script>async function tryPrice(){const b=document.getElementById('try-btn'),r=document.getElementById('try-result');b.disabled=true;b.textContent='Loading…';r.textContent='Calling live tool…';try{const x=await fetch('/try/btc_price',{method:'POST'}),j=await x.json();if(!x.ok)throw new Error(j.error||'Request failed');const usd=j.usd||j.price_usd||j.price?.usd||j.result?.usd;const stamp=j.timestamp||j.updated_at||j.result?.timestamp||'live';r.innerHTML='<strong>BTC / USD</strong> '+(usd?Number(usd).toLocaleString():'Live result received')+' · '+stamp}catch(e){r.textContent='Preview unavailable: '+e.message}finally{b.disabled=false;b.textContent='Get BTC price'}}</script></body></html>`
 
 // ────────────────────────────────────────────────────────────────────────────
 // Main
